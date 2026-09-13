@@ -20,11 +20,31 @@ async function mockApplication(context: BrowserContext, status: () => object, ch
 }
 
 async function fillRequiredGame(page: import('@playwright/test').Page) {
+  await page.getByLabel('Match Type').selectOption('Singles Match');
   await page.getByLabel('Match Date').fill('2026-09-07');
   await page.getByRole('combobox', { name: 'Player 1' }).click(); await page.getByRole('option', { name: 'Alice' }).click();
   await page.getByRole('combobox', { name: 'Player 2' }).click(); await page.getByRole('option', { name: 'Bob' }).click();
   await page.getByLabel(/Choose one MP4/).setInputFiles({ name: 'game.mp4', mimeType: 'video/mp4', buffer: Buffer.from('abc') });
 }
+
+test('selects the Game video by drag and drop', async ({ browser }) => {
+  const context = await browser.newContext(); await mockApplication(context, () => ({ busy: false }));
+  const page = await context.newPage(); await page.goto('/');
+  const transfer = await page.evaluateHandle(`(() => {
+    const data = new DataTransfer(); data.items.add(new File(['abc'], 'dropped-game.mp4', { type: 'video/mp4' })); return data;
+  })()`);
+  const dropTarget = page.locator('.file-drop'); await dropTarget.dispatchEvent('dragenter', { dataTransfer: transfer });
+  await expect(dropTarget).toHaveClass(/drag-active/); await dropTarget.dispatchEvent('drop', { dataTransfer: transfer });
+  await expect(dropTarget).not.toHaveClass(/drag-active/); await expect(page.getByText('dropped-game.mp4')).toBeVisible();
+  await expect(page.getByText('0.0 MB')).toBeVisible(); await context.close();
+});
+
+test('defaults new Game Uploads to Doubles Match', async ({ browser }) => {
+  const context = await browser.newContext(); await mockApplication(context, () => ({ busy: false }));
+  const page = await context.newPage(); await page.goto('/');
+  await expect(page.getByLabel('Match Type')).toHaveValue('Doubles Match');
+  await expect(page.getByRole('combobox', { name: 'Player 4' })).toBeVisible(); await context.close();
+});
 
 test('separate Uploader contexts see the single global upload slot', async ({ browser }) => {
   let busy = false; const first = await browser.newContext(); const second = await browser.newContext();
@@ -45,6 +65,7 @@ test('confirms Public, reports effective Private, and Upload another retains onl
   await page.getByRole('button', { name: 'Start Game Upload' }).click(); await expect(page.getByRole('heading', { name: 'Game uploaded' })).toBeVisible();
   await expect(page.getByText(/Effective Visibility: Private/)).toBeVisible(); await expect(page.getByRole('link', { name: /YouTube Studio/ })).toHaveAttribute('href', /video-1/);
   await page.getByRole('button', { name: 'Upload another' }).click(); expect(await page.getByLabel('Match Date').inputValue()).toBe('2026-09-08');
+  expect(await page.getByLabel('Match Type').inputValue()).toBe('Doubles Match');
   expect(await page.getByLabel('Requested Visibility').inputValue()).toBe('Unlisted'); expect(await page.getByRole('combobox', { name: 'Player 1' }).inputValue()).toBe('');
   await context.close();
 });
@@ -62,7 +83,7 @@ test('an interrupted owner releases the lease and restarts from an empty file', 
   const context = await browser.newContext(); await mockApplication(context, () => ({ busy: true, upload: view }));
   const page = await context.newPage(); await page.goto('/'); await expect(page.getByRole('heading', { name: 'Restart this Game Upload' })).toBeVisible();
   await page.getByRole('button', { name: 'Release and restart' }).click(); await expect(page.getByRole('heading', { name: 'Publish one badminton Game' })).toBeVisible();
-  await expect(page.getByText('Choose one MP4 file (up to 2 GB)')).toBeVisible(); await context.close();
+  await expect(page.getByText('Drag and drop one MP4 file here')).toBeVisible(); await context.close();
 });
 
 test('shared-password login reaches the form and cancellation releases the current upload', async ({ browser }) => {

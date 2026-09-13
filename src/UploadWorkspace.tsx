@@ -1,4 +1,4 @@
-import { type FormEvent, useEffect, useRef, useState } from 'react';
+import { type DragEvent, type FormEvent, useEffect, useRef, useState } from 'react';
 import { CHUNK_SIZE, HEARTBEAT_INTERVAL_MS, MAX_VIDEO_BYTES, gameUploadMetadataSchema, type Player, type UploadView } from '../shared/domain';
 import type { Session } from './App';
 import { ApiError, api } from './api';
@@ -17,6 +17,7 @@ export function UploadWorkspace({ session, initialScreen, initialUpload, onScree
   const [players, setPlayers] = useState<Player[]>([]); const [manageOpen, setManageOpen] = useState(false);
   const [error, setError] = useState(''); const [progress, setProgress] = useState(initialUpload?.uploadedBytes ?? 0);
   const [upload, setUpload] = useState<UploadView | null>(initialUpload); const [screen, setScreen] = useState(initialScreen);
+  const [draggingVideo, setDraggingVideo] = useState(false);
   const uploadAbort = useRef<AbortController | null>(null);
   useEffect(() => { void refreshPlayers(); }, []);
   async function refreshPlayers() { try { setPlayers((await api.players()).players); } catch (caught) { setError(message(caught)); } }
@@ -25,6 +26,23 @@ export function UploadWorkspace({ session, initialScreen, initialUpload, onScree
   async function renamePlayer(previous: Player, displayName: string) { const updated = await api.renamePlayer(previous.id, displayName); setPlayers((current) => current.map((entry) => entry.id === updated.id ? updated : entry)); dispatch({ type: 'rename', player: updated }); }
   async function mergePlayer(source: Player, targetId: string) { const target = await api.mergePlayer(source.id, targetId); setPlayers((current) => current.filter((entry) => entry.id !== source.id)); dispatch({ type: 'merge', sourceId: source.id, target }); }
   async function removePlayer(player: Player) { await api.removePlayer(player.id); setPlayers((current) => current.filter((entry) => entry.id !== player.id)); dispatch({ type: 'remove', id: player.id }); }
+
+  function selectVideo(files: FileList | null) {
+    if (!files?.length) return;
+    if (files.length !== 1) { setError('Select one MP4 file.'); return; }
+    setError(''); dispatch({ type: 'field', field: 'file', value: files[0] ?? null });
+  }
+  function dragVideo(event: DragEvent<HTMLLabelElement>) {
+    event.preventDefault();
+    if (!uploading) setDraggingVideo(true);
+  }
+  function leaveVideo(event: DragEvent<HTMLLabelElement>) {
+    if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDraggingVideo(false);
+  }
+  function dropVideo(event: DragEvent<HTMLLabelElement>) {
+    event.preventDefault(); setDraggingVideo(false);
+    if (!uploading) selectVideo(event.dataTransfer.files);
+  }
 
   async function submit(event: FormEvent) {
     event.preventDefault(); setError('');
@@ -73,7 +91,11 @@ export function UploadWorkspace({ session, initialScreen, initialUpload, onScree
     <div className="heading-row"><div><p className="eyebrow">New Game Upload</p><h1>Publish one badminton Game</h1></div><div className="heading-actions"><button className="secondary" disabled={uploading} onClick={() => setManageOpen(true)}>Manage Players</button><p className="mode-badge">{session.publisherMode === 'fake' ? 'Local fake publisher' : 'YouTube'}</p></div></div>
     {!session.auditApproved && <div className="notice" role="note"><strong>Private-only mode.</strong> You may record a requested Visibility, but until the YouTube API compliance audit is approved this Game will be uploaded as Private.</div>}
     <form className="card upload-form" onSubmit={submit} noValidate>
-      <section><h2>Video</h2><label className="file-drop"><input key={state.fileInputKey} type="file" accept="video/mp4" required disabled={uploading} onChange={(event) => dispatch({ type: 'field', field: 'file', value: event.target.files?.[0] ?? null })} /><span>{state.file ? state.file.name : 'Choose one MP4 file (up to 2 GB)'}</span></label>
+      <section><h2>Video</h2><label className={`file-drop${draggingVideo ? ' drag-active' : ''}${uploading ? ' disabled' : ''}`}
+        onDragEnter={dragVideo} onDragOver={dragVideo} onDragLeave={leaveVideo} onDrop={dropVideo}>
+        <input key={state.fileInputKey} type="file" accept="video/mp4" required disabled={uploading} aria-label="Choose one MP4 file (up to 2 GB)" onChange={(event) => selectVideo(event.target.files)} />
+        {state.file ? <span className="file-name">{state.file.name}</span> : <><span className="file-drop-title">Drag and drop one MP4 file here</span><span className="file-drop-hint">or choose one from your computer (up to 2 GB)</span></>}
+      </label>
         {state.file && <small className={state.file.size > MAX_VIDEO_BYTES ? 'field-error' : ''}>{(state.file.size / 1024 / 1024).toFixed(1)} MB</small>}</section>
       <section><h2>Match</h2><div className="field-grid">
         <label>Match Type<select value={state.matchType} disabled={uploading} onChange={(event) => dispatch({ type: 'field', field: 'matchType', value: event.target.value as typeof state.matchType })}><option>Singles Match</option><option>Doubles Match</option></select></label>

@@ -16,8 +16,8 @@ Badminton Uploader is a simple, English-only desktop web application for publish
 
 The form accepts one upload at a time and contains:
 
-- One MP4 file no larger than 2 GB.
-- Match Type: `Singles Match` or `Doubles Match`.
+- One MP4 file no larger than 2 GB, selected with the file picker or drag and drop.
+- Match Type: `Singles Match` or `Doubles Match`, defaulting to `Doubles Match`.
 - Two unique Players for Singles or four unique Players for Doubles.
 - A required, explicitly selected Match Date.
 - An optional Game Number that starts blank.

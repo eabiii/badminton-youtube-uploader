@@ -10,7 +10,7 @@ export type UploadFormAction =
   | { type: 'merge'; sourceId: string; target: Player }
   | { type: 'remove'; id: string } | { type: 'rename'; player: Player } | { type: 'reset'; retainDate: boolean };
 
-const initial = (matchDate = ''): UploadFormState => ({ file: null, matchType: 'Singles Match', players: [null, null, null, null],
+const initial = (matchDate = ''): UploadFormState => ({ file: null, matchType: 'Doubles Match', players: [null, null, null, null],
   titleNames: ['', '', '', ''], matchDate, gameNumber: '', description: '', visibility: 'Unlisted',
   title: { value: '', isCustom: false }, fileInputKey: 0 });
 

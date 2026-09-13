@@ -41,8 +41,14 @@ textarea { min-height: 100px; resize: vertical; }
 .upload-form { overflow: hidden; }
 .upload-form section { padding: 28px 32px; border-bottom: 1px solid #e7ebe8; }
 .upload-form > .error, .upload-form > .progress-block, .upload-form > .wide { margin: 22px 32px; width: calc(100% - 64px); }
-.file-drop { border: 1.5px dashed #9eb4a6; border-radius: 10px; padding: 22px; text-align: center; background: #f9fbf9; cursor: pointer; }
+.file-drop { border: 1.5px dashed #9eb4a6; border-radius: 10px; padding: 22px; text-align: center; background: #f9fbf9; cursor: pointer; transition: border-color .15s ease, background .15s ease, box-shadow .15s ease; }
+.file-drop:hover { border-color: #247249; background: #f3f8f4; }
+.file-drop.drag-active { border-color: #19653e; background: #e8f3eb; box-shadow: 0 0 0 3px rgba(36, 114, 73, .13); }
+.file-drop.disabled { cursor: default; opacity: .65; }
+.file-drop.disabled:hover { border-color: #9eb4a6; background: #f9fbf9; }
 .file-drop input { position: absolute; opacity: 0; pointer-events: none; width: 1px; }
+.file-drop-title, .file-name { display: block; color: #244333; font-weight: 750; }
+.file-drop-hint { display: block; margin-top: 5px; color: #67726c; font-size: 13px; font-weight: 500; }
 small, .optional, .count { color: #78827c; font-size: 12px; font-weight: 500; }
 .count { float: right; }
 .over { color: #b82c2c; }

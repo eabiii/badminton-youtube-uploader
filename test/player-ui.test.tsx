@@ -30,7 +30,7 @@ describe('Player upload interactions', () => {
 
   it('Upload another retains only Match Date', () => {
     const reset = uploadFormReducer(blank, { type: 'reset', retainDate: true });
-    expect(reset.matchDate).toBe('2026-09-07'); expect(reset.matchType).toBe('Singles Match'); expect(reset.players).toEqual([null, null, null, null]);
+    expect(reset.matchDate).toBe('2026-09-07'); expect(reset.matchType).toBe('Doubles Match'); expect(reset.players).toEqual([null, null, null, null]);
     expect(reset.gameNumber).toBe(''); expect(reset.description).toBe(''); expect(reset.visibility).toBe('Unlisted'); expect(reset.title).toEqual({ value: '', isCustom: false });
   });
 });
