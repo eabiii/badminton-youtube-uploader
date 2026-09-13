@@ -24,11 +24,15 @@ export async function sha256(value: string): Promise<string> {
 export async function verifyPassword(password: string, encoded: string): Promise<boolean> {
   const [algorithm, iterationText, saltText, expectedText] = encoded.split(':');
   const iterations = Number(iterationText);
-  if (algorithm !== 'pbkdf2-sha256' || !Number.isSafeInteger(iterations) || iterations < 100_000) return false;
+  if (algorithm !== 'pbkdf2-sha256' || !Number.isSafeInteger(iterations) || iterations < 100_000)
+    return false;
 
   try {
     const saltBytes = decodeBase64(saltText);
-    const salt = saltBytes.buffer.slice(saltBytes.byteOffset, saltBytes.byteOffset + saltBytes.byteLength) as ArrayBuffer;
+    const salt = saltBytes.buffer.slice(
+      saltBytes.byteOffset,
+      saltBytes.byteOffset + saltBytes.byteLength,
+    ) as ArrayBuffer;
     const expected = decodeBase64(expectedText);
     const key = await crypto.subtle.importKey(
       'raw',
@@ -38,11 +42,16 @@ export async function verifyPassword(password: string, encoded: string): Promise
       ['deriveBits'],
     );
     const actual = new Uint8Array(
-      await crypto.subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt, iterations }, key, expected.length * 8),
+      await crypto.subtle.deriveBits(
+        { name: 'PBKDF2', hash: 'SHA-256', salt, iterations },
+        key,
+        expected.length * 8,
+      ),
     );
     if (actual.length !== expected.length) return false;
     let difference = 0;
-    for (let index = 0; index < actual.length; index += 1) difference |= actual[index] ^ expected[index];
+    for (let index = 0; index < actual.length; index += 1)
+      difference |= actual[index] ^ expected[index];
     return difference === 0;
   } catch {
     return false;

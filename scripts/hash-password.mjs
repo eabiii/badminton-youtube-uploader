@@ -11,7 +11,10 @@ if (process.stdin.isTTY) {
     process.stderr.write('Shared password: ');
     const input = Buffer.alloc(1_002);
     const bytesRead = readSync(process.stdin.fd, input, 0, input.length, null);
-    password = input.subarray(0, bytesRead).toString('utf8').replace(/[\r\n]+$/, '');
+    password = input
+      .subarray(0, bytesRead)
+      .toString('utf8')
+      .replace(/[\r\n]+$/, '');
   } finally {
     if (echoDisabled) execFileSync('stty', ['echo'], { stdio: ['inherit', 'ignore', 'inherit'] });
     process.stderr.write('\n');
@@ -19,7 +22,9 @@ if (process.stdin.isTTY) {
 } else {
   const chunks = [];
   for await (const chunk of process.stdin) chunks.push(chunk);
-  password = Buffer.concat(chunks).toString('utf8').replace(/[\r\n]+$/, '');
+  password = Buffer.concat(chunks)
+    .toString('utf8')
+    .replace(/[\r\n]+$/, '');
 }
 if (!password) {
   console.error('Provide the shared password on standard input.');
@@ -28,5 +33,7 @@ if (!password) {
   const iterations = 600_000;
   const salt = randomBytes(16);
   const hash = pbkdf2Sync(password, salt, iterations, 32, 'sha256');
-  process.stdout.write(`pbkdf2-sha256:${iterations}:${salt.toString('base64')}:${hash.toString('base64')}\n`);
+  process.stdout.write(
+    `pbkdf2-sha256:${iterations}:${salt.toString('base64')}:${hash.toString('base64')}\n`,
+  );
 }

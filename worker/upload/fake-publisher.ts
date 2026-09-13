@@ -18,7 +18,12 @@ export class FakeYouTubePublisher implements YouTubePublisher {
       : { nextOffset };
   }
 
-  async upload(uploadUrl: string, bytes: ArrayBuffer, start: number, uploadLength: number): Promise<ChunkResult> {
+  async upload(
+    uploadUrl: string,
+    bytes: ArrayBuffer,
+    start: number,
+    uploadLength: number,
+  ): Promise<ChunkResult> {
     const current = this.offsets.get(uploadUrl) ?? 0;
     if (start !== current) return { complete: false, nextOffset: current };
     const nextOffset = start + bytes.byteLength;

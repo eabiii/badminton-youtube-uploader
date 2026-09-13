@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { editTitle, effectiveVisibility, formatMatchDate, gameUploadMetadataSchema, generateTitle, normalizePlayerDisplayName,
-  normalizePlayerName, regenerateTitle, updateGeneratedTitle } from '../shared/domain';
+import {
+  editTitle,
+  effectiveVisibility,
+  formatMatchDate,
+  gameUploadMetadataSchema,
+  generateTitle,
+  normalizePlayerDisplayName,
+  normalizePlayerName,
+  regenerateTitle,
+  updateGeneratedTitle,
+} from '../shared/domain';
 
 const base = {
   fileName: 'game.mp4',
@@ -31,8 +40,13 @@ describe('Game Upload domain rules', () => {
 
   it('formats Singles, Doubles, optional Game Number, and Match Dates', () => {
     expect(formatMatchDate('2026-01-02')).toBe('January 2, 2026');
-    expect(generateTitle({ matchType: 'Doubles Match', titleNames: ['A', 'B', 'C', 'D'], matchDate: '2026-09-07' }))
-      .toBe('A/B vs C/D | Doubles Match | September 7, 2026');
+    expect(
+      generateTitle({
+        matchType: 'Doubles Match',
+        titleNames: ['A', 'B', 'C', 'D'],
+        matchDate: '2026-09-07',
+      }),
+    ).toBe('A/B vs C/D | Doubles Match | September 7, 2026');
   });
 
   it('keeps a Custom Title sticky until explicit regeneration', () => {
@@ -42,7 +56,9 @@ describe('Game Upload domain rules', () => {
   });
 
   it('uses Title Name Overrides only in generated titles', () => {
-    expect(generateTitle({ ...base, titleNames: ['A', 'B'] })).toBe('A vs B | Singles Match | September 7, 2026');
+    expect(generateTitle({ ...base, titleNames: ['A', 'B'] })).toBe(
+      'A vs B | Singles Match | September 7, 2026',
+    );
     expect(base.players).toEqual(['Alice', 'Bob']);
   });
 
@@ -63,12 +79,18 @@ describe('Game Upload domain rules', () => {
 
   it('rejects empty and overlong titles', () => {
     expect(gameUploadMetadataSchema.safeParse({ ...base, title: ' ' }).success).toBe(false);
-    expect(gameUploadMetadataSchema.safeParse({ ...base, title: 'x'.repeat(101) }).success).toBe(false);
+    expect(gameUploadMetadataSchema.safeParse({ ...base, title: 'x'.repeat(101) }).success).toBe(
+      false,
+    );
   });
 
   it('rejects invalid files and Game Numbers', () => {
-    expect(gameUploadMetadataSchema.safeParse({ ...base, mimeType: 'video/quicktime' }).success).toBe(false);
-    expect(gameUploadMetadataSchema.safeParse({ ...base, fileSize: 2 * 1024 * 1024 * 1024 + 1 }).success).toBe(false);
+    expect(
+      gameUploadMetadataSchema.safeParse({ ...base, mimeType: 'video/quicktime' }).success,
+    ).toBe(false);
+    expect(
+      gameUploadMetadataSchema.safeParse({ ...base, fileSize: 2 * 1024 * 1024 * 1024 + 1 }).success,
+    ).toBe(false);
     expect(gameUploadMetadataSchema.safeParse({ ...base, gameNumber: 0 }).success).toBe(false);
   });
 });

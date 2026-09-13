@@ -52,7 +52,10 @@ export class UploadCoordinator {
 
   async start(ownerSessionHash: string, input: unknown): Promise<UploadView> {
     const metadata = gameUploadMetadataSchema.parse(input);
-    const uploadVisibility: Visibility = effectiveVisibility(metadata.requestedVisibility, this.auditApproved);
+    const uploadVisibility: Visibility = effectiveVisibility(
+      metadata.requestedVisibility,
+      this.auditApproved,
+    );
     const now = this.now();
     const record: LeaseRecord = {
       leaseId: crypto.randomUUID(),
@@ -71,7 +74,10 @@ export class UploadCoordinator {
     }
 
     try {
-      const uploadUrl = await this.publisher.create({ ...metadata, effectiveVisibility: uploadVisibility });
+      const uploadUrl = await this.publisher.create({
+        ...metadata,
+        effectiveVisibility: uploadVisibility,
+      });
       await this.leases.attachUploadUrl(record.leaseId, ownerSessionHash, uploadUrl);
       return this.view({ ...record, uploadUrl });
     } catch (error) {
@@ -91,7 +97,8 @@ export class UploadCoordinator {
     if (!active || active.leaseId !== leaseId) {
       throw new UploadError('The upload lease expired. Restart from byte zero.', 410);
     }
-    if (active.ownerSessionHash !== ownerSessionHash) throw new UploadError('This upload belongs to another session.', 403);
+    if (active.ownerSessionHash !== ownerSessionHash)
+      throw new UploadError('This upload belongs to another session.', 403);
     return active;
   }
 
@@ -102,9 +109,14 @@ export class UploadCoordinator {
     bytes: ArrayBuffer,
   ): Promise<{ complete: boolean; upload?: UploadView; nextOffset: number }> {
     const active = await this.owned(ownerSessionHash, leaseId);
-    if (active.state !== 'uploading' || !active.uploadUrl) throw new UploadError('The Game Upload cannot accept chunks.', 409);
+    if (active.state !== 'uploading' || !active.uploadUrl)
+      throw new UploadError('The Game Upload cannot accept chunks.', 409);
     const isFinal = start + bytes.byteLength === active.uploadLength;
-    if (bytes.byteLength <= 0 || bytes.byteLength > CHUNK_SIZE || (!isFinal && bytes.byteLength !== CHUNK_SIZE)) {
+    if (
+      bytes.byteLength <= 0 ||
+      bytes.byteLength > CHUNK_SIZE ||
+      (!isFinal && bytes.byteLength !== CHUNK_SIZE)
+    ) {
       throw new UploadError('Chunks must be 64 MiB except for the final chunk.', 400);
     }
     const reconciliation = await this.publisher.offset(active.uploadUrl, active.uploadLength);
@@ -112,8 +124,17 @@ export class UploadCoordinator {
       return this.completeUpload(active, reconciliation.videoId, reconciliation.nextOffset);
     }
     if (start !== reconciliation.nextOffset) {
-      await this.leases.updateProgress(leaseId, ownerSessionHash, reconciliation.nextOffset, this.now());
-      throw new UploadError('Chunk offset does not match YouTube; resume at the returned offset.', 409, reconciliation.nextOffset);
+      await this.leases.updateProgress(
+        leaseId,
+        ownerSessionHash,
+        reconciliation.nextOffset,
+        this.now(),
+      );
+      throw new UploadError(
+        'Chunk offset does not match YouTube; resume at the returned offset.',
+        409,
+        reconciliation.nextOffset,
+      );
     }
     const result = await this.publisher.upload(active.uploadUrl, bytes, start, active.uploadLength);
     await this.leases.updateProgress(leaseId, ownerSessionHash, result.nextOffset, this.now());
@@ -130,11 +151,21 @@ export class UploadCoordinator {
     try {
       await this.publisher.addToDestinationPlaylist(videoId);
     } catch {
-      await this.leases.markPartialSuccess(active.leaseId, active.ownerSessionHash, videoId, this.now());
+      await this.leases.markPartialSuccess(
+        active.leaseId,
+        active.ownerSessionHash,
+        videoId,
+        this.now(),
+      );
       return {
         complete: true,
         nextOffset,
-        upload: this.view({ ...active, state: 'partial_success', uploadedBytes: nextOffset, videoId }),
+        upload: this.view({
+          ...active,
+          state: 'partial_success',
+          uploadedBytes: nextOffset,
+          videoId,
+        }),
       };
     }
     await this.leases.release(active.leaseId, active.ownerSessionHash);
@@ -150,7 +181,8 @@ export class UploadCoordinator {
 
   async retryPlaylist(ownerSessionHash: string, leaseId: string): Promise<UploadView> {
     const active = await this.owned(ownerSessionHash, leaseId);
-    if (active.state !== 'partial_success' || !active.videoId) throw new UploadError('There is no playlist step to retry.', 409);
+    if (active.state !== 'partial_success' || !active.videoId)
+      throw new UploadError('There is no playlist step to retry.', 409);
     await this.publisher.addToDestinationPlaylist(active.videoId);
     await this.leases.release(leaseId, ownerSessionHash);
     return this.view(active);
@@ -163,7 +195,8 @@ export class UploadCoordinator {
 
   async acceptPartialSuccess(ownerSessionHash: string, leaseId: string): Promise<void> {
     const active = await this.owned(ownerSessionHash, leaseId);
-    if (active.state !== 'partial_success') throw new UploadError('The Game Upload is not in Partial Success.', 409);
+    if (active.state !== 'partial_success')
+      throw new UploadError('The Game Upload is not in Partial Success.', 409);
     await this.leases.release(leaseId, ownerSessionHash);
   }
 }

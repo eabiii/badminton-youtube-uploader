@@ -9,5 +9,12 @@
     "noEmit": true,
     "types": ["@cloudflare/workers-types", "vitest/globals", "node"]
   },
-  "include": ["worker", "shared", "test/**/*.ts", "vitest.config.ts", "drizzle.config.ts", "playwright.config.ts"]
+  "include": [
+    "worker",
+    "shared",
+    "test/**/*.ts",
+    "vitest.config.ts",
+    "drizzle.config.ts",
+    "playwright.config.ts"
+  ]
 }

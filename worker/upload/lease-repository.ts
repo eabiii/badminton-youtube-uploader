@@ -1,4 +1,9 @@
-import { LEASE_DURATION_MS, type GameUploadMetadata, type UploadState, type Visibility } from '../../shared/domain';
+import {
+  LEASE_DURATION_MS,
+  type GameUploadMetadata,
+  type UploadState,
+  type Visibility,
+} from '../../shared/domain';
 
 export type LeaseRecord = {
   leaseId: string;
@@ -18,8 +23,18 @@ export interface LeaseRepository {
   findActive(now: number): Promise<LeaseRecord | null>;
   attachUploadUrl(leaseId: string, ownerSessionHash: string, uploadUrl: string): Promise<void>;
   renew(leaseId: string, ownerSessionHash: string, now: number): Promise<boolean>;
-  updateProgress(leaseId: string, ownerSessionHash: string, uploadedBytes: number, now: number): Promise<void>;
-  markPartialSuccess(leaseId: string, ownerSessionHash: string, videoId: string, now: number): Promise<void>;
+  updateProgress(
+    leaseId: string,
+    ownerSessionHash: string,
+    uploadedBytes: number,
+    now: number,
+  ): Promise<void>;
+  markPartialSuccess(
+    leaseId: string,
+    ownerSessionHash: string,
+    videoId: string,
+    now: number,
+  ): Promise<void>;
   release(leaseId: string, ownerSessionHash: string): Promise<void>;
 }
 
@@ -74,7 +89,10 @@ export class D1LeaseRepository implements LeaseRepository {
         record.uploadLength,
         record.uploadedBytes,
         record.videoId,
-        JSON.stringify({ metadata: record.metadata, effectiveVisibility: record.effectiveVisibility }),
+        JSON.stringify({
+          metadata: record.metadata,
+          effectiveVisibility: record.effectiveVisibility,
+        }),
         now,
       )
       .run();
@@ -93,9 +111,15 @@ export class D1LeaseRepository implements LeaseRepository {
     return row ? toRecord(row) : null;
   }
 
-  async attachUploadUrl(leaseId: string, ownerSessionHash: string, uploadUrl: string): Promise<void> {
+  async attachUploadUrl(
+    leaseId: string,
+    ownerSessionHash: string,
+    uploadUrl: string,
+  ): Promise<void> {
     await this.database
-      .prepare('UPDATE upload_lease SET upload_url = ? WHERE singleton = 1 AND lease_id = ? AND owner_session_hash = ?')
+      .prepare(
+        'UPDATE upload_lease SET upload_url = ? WHERE singleton = 1 AND lease_id = ? AND owner_session_hash = ?',
+      )
       .bind(uploadUrl, leaseId, ownerSessionHash)
       .run();
   }
@@ -110,7 +134,12 @@ export class D1LeaseRepository implements LeaseRepository {
     return (result.meta.changes ?? 0) === 1;
   }
 
-  async updateProgress(leaseId: string, ownerSessionHash: string, uploadedBytes: number, now: number): Promise<void> {
+  async updateProgress(
+    leaseId: string,
+    ownerSessionHash: string,
+    uploadedBytes: number,
+    now: number,
+  ): Promise<void> {
     await this.database
       .prepare(
         'UPDATE upload_lease SET uploaded_bytes = ?, expires_at = ? WHERE singleton = 1 AND lease_id = ? AND owner_session_hash = ?',
@@ -119,7 +148,12 @@ export class D1LeaseRepository implements LeaseRepository {
       .run();
   }
 
-  async markPartialSuccess(leaseId: string, ownerSessionHash: string, videoId: string, now: number): Promise<void> {
+  async markPartialSuccess(
+    leaseId: string,
+    ownerSessionHash: string,
+    videoId: string,
+    now: number,
+  ): Promise<void> {
     await this.database
       .prepare(
         `UPDATE upload_lease SET state = 'partial_success', video_id = ?, uploaded_bytes = upload_length,

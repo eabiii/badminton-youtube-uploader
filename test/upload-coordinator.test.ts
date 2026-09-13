@@ -24,33 +24,55 @@ class RecordingPublisher implements YouTubePublisher {
   playlistAttempts = 0;
   failPlaylist = false;
 
-  async create(input: PublisherMetadata) { this.creates.push(input); return 'server-only-upload-url'; }
+  async create(input: PublisherMetadata) {
+    this.creates.push(input);
+    return 'server-only-upload-url';
+  }
   async offset(_url: string, length: number) {
     return this.offsetValue === length
       ? { nextOffset: this.offsetValue, videoId: 'video-1' }
       : { nextOffset: this.offsetValue };
   }
-  async upload(_url: string, bytes: ArrayBuffer, start: number, length: number): Promise<ChunkResult> {
+  async upload(
+    _url: string,
+    bytes: ArrayBuffer,
+    start: number,
+    length: number,
+  ): Promise<ChunkResult> {
     this.uploads += 1;
     this.offsetValue = start + bytes.byteLength;
     return this.offsetValue === length
       ? { complete: true, nextOffset: this.offsetValue, videoId: 'video-1' }
       : { complete: false, nextOffset: this.offsetValue };
   }
-  async addToDestinationPlaylist() { this.playlistAttempts += 1; if (this.failPlaylist) throw new Error('playlist unavailable'); }
+  async addToDestinationPlaylist() {
+    this.playlistAttempts += 1;
+    if (this.failPlaylist) throw new Error('playlist unavailable');
+  }
 }
 
 describe('UploadCoordinator', () => {
   it('allows only one active Game Upload across sessions', async () => {
-    const coordinator = new UploadCoordinator(new InMemoryLeaseRepository(), new RecordingPublisher(), false, () => 1_000);
+    const coordinator = new UploadCoordinator(
+      new InMemoryLeaseRepository(),
+      new RecordingPublisher(),
+      false,
+      () => 1_000,
+    );
     await coordinator.start('session-a', metadata);
-    await expect(coordinator.start('session-b', metadata)).rejects.toMatchObject({ status: 409 } satisfies Partial<UploadError>);
+    await expect(coordinator.start('session-b', metadata)).rejects.toMatchObject({
+      status: 409,
+    } satisfies Partial<UploadError>);
     await expect(coordinator.status('session-b')).resolves.toEqual({ busy: true });
   });
 
   it('forces effective Visibility to Private before audit approval', async () => {
     const publisher = new RecordingPublisher();
-    const upload = await new UploadCoordinator(new InMemoryLeaseRepository(), publisher, false).start('session', metadata);
+    const upload = await new UploadCoordinator(
+      new InMemoryLeaseRepository(),
+      publisher,
+      false,
+    ).start('session', metadata);
     expect(upload.requestedVisibility).toBe('Public');
     expect(upload.effectiveVisibility).toBe('Private');
     expect(publisher.creates[0]?.effectiveVisibility).toBe('Private');
@@ -59,10 +81,17 @@ describe('UploadCoordinator', () => {
 
   it('expires an abandoned lease and lets another session acquire it', async () => {
     let now = 1_000;
-    const coordinator = new UploadCoordinator(new InMemoryLeaseRepository(), new RecordingPublisher(), false, () => now);
+    const coordinator = new UploadCoordinator(
+      new InMemoryLeaseRepository(),
+      new RecordingPublisher(),
+      false,
+      () => now,
+    );
     await coordinator.start('session-a', metadata);
     now += LEASE_DURATION_MS + 1;
-    await expect(coordinator.start('session-b', metadata)).resolves.toMatchObject({ uploadedBytes: 0 });
+    await expect(coordinator.start('session-b', metadata)).resolves.toMatchObject({
+      uploadedBytes: 0,
+    });
   });
 
   it('renews the lease with a heartbeat', async () => {
@@ -80,8 +109,9 @@ describe('UploadCoordinator', () => {
     publisher.offsetValue = CHUNK_SIZE;
     const coordinator = new UploadCoordinator(new InMemoryLeaseRepository(), publisher, false);
     const upload = await coordinator.start('session', metadata);
-    await expect(coordinator.uploadChunk('session', upload.leaseId, 0, new ArrayBuffer(CHUNK_SIZE)))
-      .rejects.toMatchObject({ status: 409, offset: CHUNK_SIZE });
+    await expect(
+      coordinator.uploadChunk('session', upload.leaseId, 0, new ArrayBuffer(CHUNK_SIZE)),
+    ).rejects.toMatchObject({ status: 409, offset: CHUNK_SIZE });
     expect(publisher.uploads).toBe(0);
   });
 
@@ -111,7 +141,11 @@ describe('UploadCoordinator', () => {
   });
 
   it('cancellation releases the singleton lease', async () => {
-    const coordinator = new UploadCoordinator(new InMemoryLeaseRepository(), new RecordingPublisher(), false);
+    const coordinator = new UploadCoordinator(
+      new InMemoryLeaseRepository(),
+      new RecordingPublisher(),
+      false,
+    );
     const upload = await coordinator.start('session-a', metadata);
     await coordinator.cancel('session-a', upload.leaseId);
     await expect(coordinator.start('session-b', metadata)).resolves.toBeDefined();

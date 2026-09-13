@@ -42,7 +42,10 @@ app.post('/api/login', async (context) => {
     return context.json({ error: 'Too many failed sign-in attempts. Try again later.' }, 429);
   }
   const body = loginRequestSchema.safeParse(await context.req.json().catch(() => null));
-  if (!body.success || !(await verifyPassword(body.data.password, context.env.SHARED_PASSWORD_HASH))) {
+  if (
+    !body.success ||
+    !(await verifyPassword(body.data.password, context.env.SHARED_PASSWORD_HASH))
+  ) {
     await throttle.failed(clientHash);
     return context.json({ error: 'The shared password is incorrect.' }, 401);
   }
@@ -81,12 +84,19 @@ app.post('/api/players', async (context) => {
 
 app.patch('/api/players/:id', async (context) => {
   const body = playerMutationSchema.parse(await context.req.json().catch(() => null));
-  return context.json(await new PlayerDirectory(context.env.DB).rename(context.req.param('id'), body.displayName));
+  return context.json(
+    await new PlayerDirectory(context.env.DB).rename(context.req.param('id'), body.displayName),
+  );
 });
 
 app.post('/api/players/:sourceId/merge', async (context) => {
   const body = playerMergeSchema.parse(await context.req.json().catch(() => null));
-  return context.json(await new PlayerDirectory(context.env.DB).merge(context.req.param('sourceId'), body.targetPlayerId));
+  return context.json(
+    await new PlayerDirectory(context.env.DB).merge(
+      context.req.param('sourceId'),
+      body.targetPlayerId,
+    ),
+  );
 });
 
 app.delete('/api/players/:id', async (context) => {
@@ -106,13 +116,17 @@ app.post('/api/upload/start', async (context) => {
 });
 
 app.post('/api/upload/:leaseId/heartbeat', async (context) => {
-  await coordinatorFor(context.env).heartbeat(context.get('sessionHash'), context.req.param('leaseId'));
+  await coordinatorFor(context.env).heartbeat(
+    context.get('sessionHash'),
+    context.req.param('leaseId'),
+  );
   return context.body(null, 204);
 });
 
 app.put('/api/upload/:leaseId/chunk', async (context) => {
   const start = Number(context.req.header('x-upload-offset'));
-  if (!Number.isSafeInteger(start) || start < 0) return context.json({ error: 'A valid upload offset is required.' }, 400);
+  if (!Number.isSafeInteger(start) || start < 0)
+    return context.json({ error: 'A valid upload offset is required.' }, 400);
   const result = await coordinatorFor(context.env).uploadChunk(
     context.get('sessionHash'),
     context.req.param('leaseId'),
@@ -124,17 +138,26 @@ app.put('/api/upload/:leaseId/chunk', async (context) => {
 
 app.post('/api/upload/:leaseId/retry-playlist', async (context) => {
   return context.json(
-    await coordinatorFor(context.env).retryPlaylist(context.get('sessionHash'), context.req.param('leaseId')),
+    await coordinatorFor(context.env).retryPlaylist(
+      context.get('sessionHash'),
+      context.req.param('leaseId'),
+    ),
   );
 });
 
 app.post('/api/upload/:leaseId/cancel', async (context) => {
-  await coordinatorFor(context.env).cancel(context.get('sessionHash'), context.req.param('leaseId'));
+  await coordinatorFor(context.env).cancel(
+    context.get('sessionHash'),
+    context.req.param('leaseId'),
+  );
   return context.body(null, 204);
 });
 
 app.post('/api/upload/:leaseId/accept-partial-success', async (context) => {
-  await coordinatorFor(context.env).acceptPartialSuccess(context.get('sessionHash'), context.req.param('leaseId'));
+  await coordinatorFor(context.env).acceptPartialSuccess(
+    context.get('sessionHash'),
+    context.req.param('leaseId'),
+  );
   return context.body(null, 204);
 });
 
@@ -142,8 +165,10 @@ app.onError((error, context) => {
   if (error instanceof UploadError) {
     return context.json({ error: error.message, offset: error.offset }, error.status);
   }
-  if (error instanceof PlayerDirectoryError) return context.json({ error: error.message }, error.status);
-  if (error instanceof z.ZodError) return context.json({ error: error.issues[0]?.message ?? 'Invalid request.' }, 400);
+  if (error instanceof PlayerDirectoryError)
+    return context.json({ error: error.message }, error.status);
+  if (error instanceof z.ZodError)
+    return context.json({ error: error.issues[0]?.message ?? 'Invalid request.' }, 400);
   return context.json({ error: 'The server could not complete the request.' }, 500);
 });
 

@@ -5,10 +5,22 @@ export class LiveYouTubePublisher implements YouTubePublisher {
   constructor(private readonly env: Bindings) {}
 
   private requireConfiguration(): Required<
-    Pick<Bindings, 'YOUTUBE_CLIENT_ID' | 'YOUTUBE_CLIENT_SECRET' | 'YOUTUBE_REFRESH_TOKEN' | 'YOUTUBE_PLAYLIST_ID'>
+    Pick<
+      Bindings,
+      | 'YOUTUBE_CLIENT_ID'
+      | 'YOUTUBE_CLIENT_SECRET'
+      | 'YOUTUBE_REFRESH_TOKEN'
+      | 'YOUTUBE_PLAYLIST_ID'
+    >
   > {
-    const { YOUTUBE_CLIENT_ID, YOUTUBE_CLIENT_SECRET, YOUTUBE_REFRESH_TOKEN, YOUTUBE_PLAYLIST_ID } = this.env;
-    if (!YOUTUBE_CLIENT_ID || !YOUTUBE_CLIENT_SECRET || !YOUTUBE_REFRESH_TOKEN || !YOUTUBE_PLAYLIST_ID) {
+    const { YOUTUBE_CLIENT_ID, YOUTUBE_CLIENT_SECRET, YOUTUBE_REFRESH_TOKEN, YOUTUBE_PLAYLIST_ID } =
+      this.env;
+    if (
+      !YOUTUBE_CLIENT_ID ||
+      !YOUTUBE_CLIENT_SECRET ||
+      !YOUTUBE_REFRESH_TOKEN ||
+      !YOUTUBE_PLAYLIST_ID
+    ) {
       throw new Error('Live YouTube publishing is not configured.');
     }
     return { YOUTUBE_CLIENT_ID, YOUTUBE_CLIENT_SECRET, YOUTUBE_REFRESH_TOKEN, YOUTUBE_PLAYLIST_ID };
@@ -28,7 +40,8 @@ export class LiveYouTubePublisher implements YouTubePublisher {
     });
     if (!response.ok) throw new Error(`YouTube authorization refresh failed (${response.status}).`);
     const body = (await response.json()) as { access_token?: string };
-    if (!body.access_token) throw new Error('YouTube authorization refresh returned no access token.');
+    if (!body.access_token)
+      throw new Error('YouTube authorization refresh returned no access token.');
     return body.access_token;
   }
 
@@ -54,7 +67,8 @@ export class LiveYouTubePublisher implements YouTubePublisher {
       },
     );
     const uploadUrl = response.headers.get('location');
-    if (!response.ok || !uploadUrl) throw new Error(`YouTube did not create an upload session (${response.status}).`);
+    if (!response.ok || !uploadUrl)
+      throw new Error(`YouTube did not create an upload session (${response.status}).`);
     return uploadUrl;
   }
 
@@ -80,7 +94,12 @@ export class LiveYouTubePublisher implements YouTubePublisher {
     throw new Error(`YouTube offset reconciliation failed (${response.status}).`);
   }
 
-  async upload(uploadUrl: string, bytes: ArrayBuffer, start: number, uploadLength: number): Promise<ChunkResult> {
+  async upload(
+    uploadUrl: string,
+    bytes: ArrayBuffer,
+    start: number,
+    uploadLength: number,
+  ): Promise<ChunkResult> {
     const token = await this.accessToken();
     const end = start + bytes.byteLength - 1;
     const response = await fetch(uploadUrl, {
@@ -114,19 +133,24 @@ export class LiveYouTubePublisher implements YouTubePublisher {
       maxResults: '1',
     }).toString();
     const existingResponse = await fetch(lookup, { headers: { authorization: `Bearer ${token}` } });
-    if (!existingResponse.ok) throw new Error(`Destination Playlist lookup failed (${existingResponse.status}).`);
+    if (!existingResponse.ok)
+      throw new Error(`Destination Playlist lookup failed (${existingResponse.status}).`);
     const existing = (await existingResponse.json()) as { items?: unknown[] };
     if (existing.items?.length) return;
-    const response = await fetch('https://www.googleapis.com/youtube/v3/playlistItems?part=snippet', {
-      method: 'POST',
-      headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
-      body: JSON.stringify({
-        snippet: {
-          playlistId: config.YOUTUBE_PLAYLIST_ID,
-          resourceId: { kind: 'youtube#video', videoId },
-        },
-      }),
-    });
-    if (!response.ok) throw new Error(`Destination Playlist insertion failed (${response.status}).`);
+    const response = await fetch(
+      'https://www.googleapis.com/youtube/v3/playlistItems?part=snippet',
+      {
+        method: 'POST',
+        headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+        body: JSON.stringify({
+          snippet: {
+            playlistId: config.YOUTUBE_PLAYLIST_ID,
+            resourceId: { kind: 'youtube#video', videoId },
+          },
+        }),
+      },
+    );
+    if (!response.ok)
+      throw new Error(`Destination Playlist insertion failed (${response.status}).`);
   }
 }

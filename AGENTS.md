@@ -4,12 +4,12 @@ English-only desktop web application for trusted Uploaders to publish individual
 
 ## Read these before changing anything
 
-| File | What it defines |
-|---|---|
-| `CONTEXT.md` | Canonical domain language. Use these terms consistently in code, UI copy, tests, and documentation. |
-| `PRODUCT.md` | Required product behavior, constraints, exclusions, and deferred work. |
-| `PLAN.md` | Delivery order, current implementation status, defaults, exit criteria, and verification commands. |
-| `docs/adr/` | Architectural decisions and their consequences. Read the relevant ADR before changing a settled decision. |
+| File         | What it defines                                                                                           |
+| ------------ | --------------------------------------------------------------------------------------------------------- |
+| `CONTEXT.md` | Canonical domain language. Use these terms consistently in code, UI copy, tests, and documentation.       |
+| `PRODUCT.md` | Required product behavior, constraints, exclusions, and deferred work.                                    |
+| `PLAN.md`    | Delivery order, current implementation status, defaults, exit criteria, and verification commands.        |
+| `docs/adr/`  | Architectural decisions and their consequences. Read the relevant ADR before changing a settled decision. |
 
 If documents appear to conflict, preserve the architectural decisions in the ADRs, use `PRODUCT.md` for product intent, and update `PLAN.md` to reflect the resulting delivery work. Do not silently invent behavior to resolve a material conflict.
 
