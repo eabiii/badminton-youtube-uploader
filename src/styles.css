@@ -1,0 +1,77 @@
+@import "tailwindcss";
+
+:root { font-family: Inter, ui-sans-serif, system-ui, sans-serif; color: #17231d; background: #f3f6f2; font-synthesis: none; }
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 960px; min-height: 100vh; }
+button, input, select, textarea { font: inherit; }
+button { cursor: pointer; }
+.app-shell { min-height: 100vh; }
+.topbar { height: 64px; background: #123c2b; color: white; display: flex; align-items: center; justify-content: space-between; padding: 0 max(32px, calc((100vw - 1040px) / 2)); font-weight: 700; letter-spacing: -.01em; }
+.shuttle { color: #b9e769; margin-right: 8px; }
+.topbar .text-button { color: #dce8e1; }
+.content { width: 100%; max-width: 1040px; margin: 0 auto; padding: 52px 28px 80px; }
+.centered-shell { min-height: 100vh; display: grid; place-items: center; padding: 32px; }
+.card { background: white; border: 1px solid #dae2dc; border-radius: 14px; box-shadow: 0 12px 35px rgba(22, 49, 36, .06); }
+.login-card { width: 430px; padding: 38px; }
+.status-card { max-width: 650px; padding: 48px; text-align: center; }
+.eyebrow { color: #397450; font-size: 12px; font-weight: 800; letter-spacing: .12em; margin: 0 0 8px; text-transform: uppercase; }
+h1 { font-family: Georgia, serif; font-size: 36px; line-height: 1.15; letter-spacing: -.025em; margin: 0 0 12px; font-weight: 600; }
+h2 { font-family: Georgia, serif; font-size: 22px; margin: 0 0 20px; }
+.muted { color: #67726c; line-height: 1.6; }
+label { display: grid; gap: 8px; color: #34443b; font-size: 14px; font-weight: 650; }
+input, select, textarea { width: 100%; border: 1px solid #cbd5ce; border-radius: 8px; padding: 11px 12px; color: #17231d; background: white; outline: none; }
+input:focus, select:focus, textarea:focus { border-color: #247249; box-shadow: 0 0 0 3px rgba(36, 114, 73, .13); }
+button:focus-visible, a:focus-visible { outline: 3px solid #8abb46; outline-offset: 3px; }
+textarea { min-height: 100px; resize: vertical; }
+.login-card label { margin: 28px 0 18px; }
+.primary, .secondary, .danger { border-radius: 8px; padding: 11px 18px; font-weight: 750; border: 1px solid transparent; }
+.primary { background: #19653e; color: white; }
+.primary:hover { background: #104e2e; }
+.primary:disabled { opacity: .55; cursor: wait; }
+.secondary { background: white; color: #244333; border-color: #b9c8be; }
+.danger { background: white; color: #a12e2e; border-color: #dfb5b5; }
+.wide { width: 100%; padding: 14px; }
+.text-button { border: 0; padding: 4px; background: transparent; color: #19653e; font-weight: 700; }
+.inline { margin-top: 9px; }
+.error { background: #fff0ef; border: 1px solid #efc6c2; color: #8d2525; padding: 11px 13px; border-radius: 8px; line-height: 1.4; }
+.heading-row { display: flex; justify-content: space-between; align-items: end; margin-bottom: 28px; }
+.heading-actions { display: flex; align-items: center; gap: 14px; }
+.mode-badge { font-size: 12px; color: #4d6457; background: #e7eee9; padding: 7px 10px; border-radius: 99px; }
+.notice { border: 1px solid #e5c76b; background: #fff9df; color: #62531d; padding: 14px 16px; border-radius: 9px; margin-bottom: 18px; }
+.upload-form { overflow: hidden; }
+.upload-form section { padding: 28px 32px; border-bottom: 1px solid #e7ebe8; }
+.upload-form > .error, .upload-form > .progress-block, .upload-form > .wide { margin: 22px 32px; width: calc(100% - 64px); }
+.file-drop { border: 1.5px dashed #9eb4a6; border-radius: 10px; padding: 22px; text-align: center; background: #f9fbf9; cursor: pointer; }
+.file-drop input { position: absolute; opacity: 0; pointer-events: none; width: 1px; }
+small, .optional, .count { color: #78827c; font-size: 12px; font-weight: 500; }
+.count { float: right; }
+.over { color: #b82c2c; }
+.field-grid { display: grid; grid-template-columns: 1.5fr 1fr 1fr; gap: 18px; }
+.players { margin-top: 22px; display: grid; gap: 14px; }
+.player-row { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.combobox-field { position: relative; display: grid; gap: 8px; }
+.combobox-list { position: absolute; z-index: 5; top: 100%; width: 100%; max-height: 230px; overflow: auto; background: white; border: 1px solid #b9c8be; border-radius: 8px; box-shadow: 0 12px 28px rgba(22, 49, 36, .14); padding: 5px; }
+.combobox-list button { display: block; width: 100%; border: 0; border-radius: 5px; background: white; padding: 9px; text-align: left; }
+.combobox-list button:hover, .combobox-list button:focus, .combobox-list button[aria-selected="true"] { background: #e8f2eb; }
+.combobox-list .add-option { color: #19653e; font-weight: 750; }
+.combobox-list p { padding: 7px; color: #67726c; }
+.field-error { color: #a12e2e; }
+.upload-form section > label + label { margin-top: 18px; }
+.fixed-details { color: #637269; background: #f4f7f5; padding: 12px; border-radius: 7px; font-size: 13px; }
+.progress-block { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 14px; }
+progress { width: 100%; accent-color: #19653e; }
+.button-row, .links { display: flex; gap: 12px; justify-content: center; margin-top: 24px; }
+.links a { color: #19653e; font-weight: 700; }
+.status-icon, .success-mark { width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; margin: 0 auto 20px; font-size: 28px; background: #e5f2e9; color: #19653e; }
+.success-mark { background: #dff2e5; }
+.warning { color: #9a6813; }
+.visibility-note { color: #62531d; font-size: 13px; }
+.manage-dialog { width: min(900px, calc(100vw - 80px)); max-height: calc(100vh - 80px); border: 1px solid #cbd5ce; border-radius: 14px; padding: 30px; color: #17231d; }
+.manage-dialog::backdrop { background: rgba(8, 24, 16, .55); }
+.dialog-heading { display: flex; justify-content: space-between; gap: 20px; }
+.icon-button { border: 0; background: transparent; font-size: 28px; align-self: start; }
+.directory-list { display: grid; gap: 12px; margin: 24px 0; }
+.directory-row { display: grid; grid-template-columns: 1.4fr auto 1.2fr auto auto; gap: 10px; align-items: end; padding: 14px; border: 1px solid #e0e6e2; border-radius: 9px; }
+.directory-row .secondary, .directory-row .danger { height: 43px; }
+.dialog-actions { display: flex; justify-content: end; }
+.empty { color: #67726c; text-align: center; padding: 28px; }
