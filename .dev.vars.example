@@ -1,0 +1,8 @@
+# Generate with `pnpm password:hash`, then store the result as this value.
+# Format: pbkdf2-sha256:<iterations>:<base64-salt>:<base64-hash>
+SHARED_PASSWORD_HASH="pbkdf2-sha256:600000:replace-me:replace-me"
+SESSION_COOKIE_SECURE="false"
+YOUTUBE_CLIENT_ID=""
+YOUTUBE_CLIENT_SECRET=""
+YOUTUBE_REFRESH_TOKEN=""
+YOUTUBE_PLAYLIST_ID=""

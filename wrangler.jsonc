@@ -1,0 +1,21 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "badminton-youtube-uploader",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-09-12",
+  "assets": { "directory": "./dist", "binding": "ASSETS", "not_found_handling": "single-page-application" },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "badminton-youtube-uploader-local",
+      "database_id": "local-development-placeholder",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "vars": {
+    "YOUTUBE_MODE": "live",
+    "YOUTUBE_AUDIT_APPROVED": "false",
+    "SESSION_COOKIE_SECURE": "true",
+    "PASSWORD_VERSION": "1"
+  }
+}
