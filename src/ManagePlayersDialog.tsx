@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import type { Player } from '../shared/domain';
 
 export function ManagePlayersDialog({
@@ -17,11 +17,17 @@ export function ManagePlayersDialog({
   onRemove: (player: Player) => Promise<void>;
 }) {
   const dialog = useRef<HTMLDialogElement>(null);
+  const previousFocus = useRef<HTMLElement | null>(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState('');
   useEffect(() => {
-    if (open && !dialog.current?.open) dialog.current?.showModal();
-    else if (!open && dialog.current?.open) dialog.current.close();
+    if (open && !dialog.current?.open) {
+      previousFocus.current = document.activeElement as HTMLElement | null;
+      dialog.current?.showModal();
+    } else if (!open && dialog.current?.open) {
+      dialog.current.close();
+      previousFocus.current?.focus();
+    }
   }, [open]);
   async function action(key: string, work: () => Promise<void>) {
     setBusy(key);
@@ -44,6 +50,7 @@ export function ManagePlayersDialog({
         onClose();
       }}
       aria-labelledby="manage-title"
+      aria-describedby="manage-description"
     >
       <div className="dialog-heading">
         <div>
@@ -54,7 +61,7 @@ export function ManagePlayersDialog({
           ×
         </button>
       </div>
-      <p className="muted">
+      <p id="manage-description" className="muted">
         Rename a Player, merge duplicate entries, or remove an entry. Active Game Upload snapshots
         are unchanged.
       </p>
@@ -104,27 +111,35 @@ function PlayerRow({
   onMerge: (target: string) => Promise<void>;
   onRemove: () => Promise<void>;
 }) {
+  const id = useId();
   const [name, setName] = useState(player.displayName);
   const [target, setTarget] = useState('');
   const disabled = Boolean(busy);
   useEffect(() => setName(player.displayName), [player.displayName]);
   return (
-    <section className="directory-row">
-      <label>
-        Display name
-        <input value={name} disabled={disabled} onChange={(event) => setName(event.target.value)} />
+    <section className="directory-row" aria-labelledby={`${id}-name`}>
+      <label htmlFor={`${id}-display-name`}>
+        <span id={`${id}-name`}>{player.displayName}</span> display name
+        <input
+          id={`${id}-display-name`}
+          value={name}
+          disabled={disabled}
+          onChange={(event) => setName(event.target.value)}
+        />
       </label>
       <button
         type="button"
         className="secondary"
+        aria-label={`Rename ${player.displayName}`}
         disabled={disabled || name === player.displayName}
         onClick={() => void onRename(name)}
       >
         Rename
       </button>
-      <label>
-        Merge into
+      <label htmlFor={`${id}-merge-target`}>
+        Merge {player.displayName} into
         <select
+          id={`${id}-merge-target`}
           value={target}
           disabled={disabled}
           onChange={(event) => setTarget(event.target.value)}
@@ -142,14 +157,25 @@ function PlayerRow({
       <button
         type="button"
         className="secondary"
+        aria-label={`Merge ${player.displayName}`}
         disabled={disabled || !target}
-        onClick={() => void onMerge(target)}
+        onClick={() => {
+          const targetPlayer = players.find((entry) => entry.id === target);
+          if (
+            targetPlayer &&
+            window.confirm(
+              `Merge ${player.displayName} into ${targetPlayer.displayName}? This cannot be undone.`,
+            )
+          )
+            void onMerge(target);
+        }}
       >
         Merge
       </button>
       <button
         type="button"
         className="danger"
+        aria-label={`Remove ${player.displayName}`}
         disabled={disabled}
         onClick={() => {
           if (window.confirm(`Remove ${player.displayName} from the Player Directory?`))

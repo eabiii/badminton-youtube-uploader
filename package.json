@@ -24,6 +24,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
     "@cloudflare/vite-plugin": "^1.27.0",
     "@cloudflare/workers-types": "^5.20260911.1",
     "@playwright/test": "^1.63.0",

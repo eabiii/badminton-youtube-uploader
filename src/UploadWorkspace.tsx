@@ -11,6 +11,7 @@ import type { Session } from './App';
 import { ApiError, api } from './api';
 import { ManagePlayersDialog } from './ManagePlayersDialog';
 import { PlayerCombobox } from './PlayerCombobox';
+import { ScreenHeading } from './ScreenHeading';
 import { useUploadFormState } from './upload-form-state';
 
 export type WorkspaceScreen = 'form' | 'uploading' | 'partial' | 'success' | 'interrupted';
@@ -137,7 +138,13 @@ export function UploadWorkspace({
       setUpload(current);
       transition('uploading', current);
       heartbeat = setInterval(() => {
-        if (current) void api.heartbeat(current.leaseId);
+        if (current)
+          void api.heartbeat(current.leaseId).catch((caught: unknown) => {
+            if (controller.signal.aborted || !current) return;
+            setError(message(caught));
+            transition('interrupted', current);
+            controller.abort();
+          });
       }, HEARTBEAT_INTERVAL_MS);
       let offset = current.uploadedBytes;
       while (offset < state.file.size) {
@@ -187,6 +194,21 @@ export function UploadWorkspace({
       setError(message(caught));
     }
   }
+  async function releaseAndRestart() {
+    if (!upload) return;
+    setError('');
+    try {
+      await api.cancel(upload.leaseId);
+    } catch (caught) {
+      if (!(caught instanceof ApiError && caught.status === 410)) {
+        setError(message(caught));
+        return;
+      }
+    }
+    setProgress(0);
+    setUpload(null);
+    transition('form', null);
+  }
   async function retryPlaylist() {
     if (!upload) return;
     try {
@@ -214,7 +236,7 @@ export function UploadWorkspace({
       <main className="content">
         <section className="card status-card" aria-live="polite">
           <p className="eyebrow warning">Partial Success</p>
-          <h1>The Game is on YouTube, but not in the Destination Playlist</h1>
+          <ScreenHeading>The Game is on YouTube, but not in the Destination Playlist</ScreenHeading>
           <p className="muted">
             Retry only the playlist step. The video will not be uploaded again.
           </p>
@@ -235,6 +257,27 @@ export function UploadWorkspace({
         </section>
       </main>
     );
+  if (screen === 'interrupted' && upload)
+    return (
+      <main className="content">
+        <section className="card status-card" aria-describedby="interruption-description">
+          <p className="eyebrow warning">Upload interrupted</p>
+          <ScreenHeading>Restart this Game Upload</ScreenHeading>
+          <p id="interruption-description" className="muted">
+            Your selected MP4 and form details are still available in this tab. Release this lease,
+            then submit again to begin from byte zero.
+          </p>
+          {error && (
+            <p className="error" role="alert">
+              {error}
+            </p>
+          )}
+          <button className="primary" onClick={() => void releaseAndRestart()}>
+            Release and restart
+          </button>
+        </section>
+      </main>
+    );
 
   const uploading = screen === 'uploading';
   return (
@@ -242,7 +285,7 @@ export function UploadWorkspace({
       <div className="heading-row">
         <div>
           <p className="eyebrow">New Game Upload</p>
-          <h1>Publish one badminton Game</h1>
+          <ScreenHeading>Publish one badminton Game</ScreenHeading>
         </div>
         <div className="heading-actions">
           <button className="secondary" disabled={uploading} onClick={() => setManageOpen(true)}>
@@ -421,7 +464,7 @@ export function UploadWorkspace({
             </select>
           </label>
           {!session.auditApproved && state.visibility !== 'Private' && (
-            <p className="visibility-note">
+            <p className="visibility-note" role="status">
               Effective Visibility for this upload: <strong>Private</strong>
             </p>
           )}
@@ -490,7 +533,7 @@ function Result({
         <p className="success-mark" aria-hidden="true">
           ✓
         </p>
-        <h1>Game uploaded</h1>
+        <ScreenHeading>Game uploaded</ScreenHeading>
         <p className="muted">
           YouTube accepted the video and it was added to the Destination Playlist. Processing and
           copyright checks continue in YouTube Studio.

@@ -51,7 +51,7 @@ export const gameUploadMetadataSchema = z
     matchDate: z.iso.date('Select a Match Date.'),
     gameNumber: z
       .number()
-      .int()
+      .int('Game Number must be a positive whole number.')
       .positive('Game Number must be a positive whole number.')
       .optional(),
     title: z

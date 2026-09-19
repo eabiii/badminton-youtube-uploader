@@ -21,28 +21,33 @@ Dependencies: a dedicated test channel, its refresh token, and a Destination Pla
 - [x] Implement backend-owned OAuth refresh and resumable upload relay in 64 MiB chunks.
 - [x] Add cancellation, server-offset reconciliation, playlist-only retry, and Partial Success acceptance.
 - [x] Add a deterministic fake YouTube publisher for automated/local testing.
-- [ ] Exercise a >64 MiB Private upload against the dedicated test channel and configured playlist.
-- [ ] Verify two real browsers cannot upload simultaneously.
-- [ ] Verify secrets/resumable URLs are absent from local browser storage, network responses, built assets, and runtime logs.
+- [x] Exercise a >64 MiB Private upload against the dedicated test channel and configured playlist.
+- [x] Verify two real browsers cannot upload simultaneously.
+- [x] Verify secrets/resumable URLs are absent from local browser storage, network responses, built assets, and runtime logs.
 
-Exit: the three unchecked local live-integration checks pass. Hosted leak validation remains part of Phase 3.
+Exit achieved: all three local live-integration checks pass. Hosted leak validation remains part of Phase 3.
 
 ## Phase 2 — Feature-complete local application
 
 Dependencies: Phase 1 exit.
 
-Implementation and automated coverage are present, but these items remain unchecked until the Phase 1 live-test exit criteria and the corresponding local acceptance evidence pass.
+Focused automated verification confirms the implemented features. The remaining work is interruption recovery, exhaustive interaction coverage, and accessibility acceptance.
 
-- [ ] Support Singles and Doubles, unique Player positions, date, optional Game Number, description, and visibility.
-- [ ] Add Player autocomplete/add, rename, merge, and removal API behavior.
-- [ ] Add generated titles, per-upload Title Name Overrides, sticky Custom Titles, and regeneration.
-- [ ] Confirm Public uploads and enforce Private visibility for unapproved projects.
-- [ ] Add success links, Partial Success, Retry playlist, Done, and Upload another (retains only Match Date).
-- [ ] Add logout, password-version revocation, persistent cookies, and login rate limiting.
-- [ ] Share Zod validation between client and server.
-- [ ] Cover domain rules and upload coordination with automated tests.
+- [x] Support Singles and Doubles, unique Player positions, date, optional Game Number, description, and visibility.
+- [x] Add Player autocomplete/add, rename, merge, and removal API behavior.
+- [x] Add generated titles, per-upload Title Name Overrides, sticky Custom Titles, and regeneration.
+- [x] Confirm Public uploads and enforce Private visibility for unapproved projects.
+- [x] Add success links, Partial Success, Retry playlist, Done, and Upload another (retains only Match Date).
+- [ ] Recover an in-flight network interruption by releasing the lease and restarting from byte zero.
+- [x] Add logout, password-version revocation, persistent cookies, and login rate limiting.
+- [x] Share Zod validation between client and server.
+- [x] Cover domain rules and upload coordination with automated tests.
 - [ ] Add exhaustive component and Playwright coverage for all PRODUCT.md interactions.
 - [ ] Complete a keyboard/screen-reader accessibility pass.
+
+Interruption recovery, the interaction matrix, keyboard tests, and automated axe scans are complete.
+The three items above remain unchecked until the pending NVDA + Chrome acceptance pass is recorded in
+`docs/accessibility-phase-2.md`, as required by the Phase 2 completion plan.
 
 Exit: every PRODUCT.md behavior passes locally, including browser contention and abandoned byte-zero restart.
 

@@ -150,4 +150,47 @@ describe('UploadCoordinator', () => {
     await coordinator.cancel('session-a', upload.leaseId);
     await expect(coordinator.start('session-b', metadata)).resolves.toBeDefined();
   });
+
+  it("rejects ownership and expiration violations without releasing another session's lease", async () => {
+    let now = 1_000;
+    const leases = new InMemoryLeaseRepository();
+    const coordinator = new UploadCoordinator(leases, new RecordingPublisher(), false, () => now);
+    const upload = await coordinator.start('session-a', metadata);
+    await expect(coordinator.cancel('session-b', upload.leaseId)).rejects.toMatchObject({
+      status: 403,
+    } satisfies Partial<UploadError>);
+    await expect(coordinator.status('session-a')).resolves.toMatchObject({ busy: true });
+    now += LEASE_DURATION_MS + 1;
+    await expect(coordinator.heartbeat('session-a', upload.leaseId)).rejects.toMatchObject({
+      status: 410,
+    } satisfies Partial<UploadError>);
+  });
+
+  it('rejects empty and non-final short chunks', async () => {
+    const coordinator = new UploadCoordinator(
+      new InMemoryLeaseRepository(),
+      new RecordingPublisher(),
+      false,
+    );
+    const upload = await coordinator.start('session', metadata);
+    await expect(
+      coordinator.uploadChunk('session', upload.leaseId, 0, new ArrayBuffer(0)),
+    ).rejects.toMatchObject({ status: 400 } satisfies Partial<UploadError>);
+    await expect(
+      coordinator.uploadChunk('session', upload.leaseId, 0, new ArrayBuffer(7)),
+    ).rejects.toMatchObject({ status: 400 } satisfies Partial<UploadError>);
+  });
+
+  it('accepts Partial Success and releases its transient state', async () => {
+    const publisher = new RecordingPublisher();
+    publisher.failPlaylist = true;
+    const coordinator = new UploadCoordinator(new InMemoryLeaseRepository(), publisher, false);
+    const upload = await coordinator.start('session-a', { ...metadata, fileSize: 7 });
+    await coordinator.uploadChunk('session-a', upload.leaseId, 0, new ArrayBuffer(7));
+    await coordinator.acceptPartialSuccess('session-a', upload.leaseId);
+    await expect(coordinator.status('session-a')).resolves.toEqual({ busy: false });
+    await expect(
+      coordinator.acceptPartialSuccess('session-a', upload.leaseId),
+    ).rejects.toMatchObject({ status: 410 } satisfies Partial<UploadError>);
+  });
 });

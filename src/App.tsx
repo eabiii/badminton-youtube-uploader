@@ -1,10 +1,11 @@
 import { type FormEvent, useEffect, useState } from 'react';
 import type { UploadView } from '../shared/domain';
-import { api } from './api';
+import { ApiError, api } from './api';
+import { ScreenHeading } from './ScreenHeading';
 import { UploadWorkspace, type WorkspaceScreen } from './UploadWorkspace';
 
 export type Session = { auditApproved: boolean; publisherMode: 'fake' | 'live' };
-type Screen = 'checking' | 'login' | 'form' | 'busy' | 'interrupted' | WorkspaceScreen;
+type Screen = 'checking' | 'login' | 'form' | 'busy' | 'refresh-recovery' | WorkspaceScreen;
 const message = (error: unknown) =>
   error instanceof Error ? error.message : 'Something went wrong.';
 
@@ -61,7 +62,7 @@ function Busy({ onRetry }: { onRetry: () => Promise<void> }) {
         <p className="status-icon" aria-hidden="true">
           ↥
         </p>
-        <h1>Another Game Upload is active</h1>
+        <ScreenHeading>Another Game Upload is active</ScreenHeading>
         <p className="muted">
           There is one upload slot for everyone. Try again after the current upload finishes or its
           lease expires.
@@ -81,13 +82,17 @@ function Interrupted({ upload, onReleased }: { upload: UploadView; onReleased: (
       await api.cancel(upload.leaseId);
       onReleased();
     } catch (caught) {
+      if (caught instanceof ApiError && caught.status === 410) {
+        onReleased();
+        return;
+      }
       setError(message(caught));
     }
   }
   return (
     <main className="centered-shell">
       <section className="card status-card">
-        <h1>Restart this Game Upload</h1>
+        <ScreenHeading>Restart this Game Upload</ScreenHeading>
         <p className="muted">
           The video file is no longer available after an interruption, refresh, closed tab, or
           computer restart. Release this lease and begin again from byte zero.
@@ -119,7 +124,7 @@ export function App() {
         status.upload
           ? status.upload.state === 'partial_success'
             ? 'partial'
-            : 'interrupted'
+            : 'refresh-recovery'
           : status.busy
             ? 'busy'
             : 'form',
@@ -159,7 +164,7 @@ export function App() {
         </button>
       </header>
       {screen === 'busy' && <Busy onRetry={load} />}
-      {screen === 'interrupted' && activeUpload && (
+      {screen === 'refresh-recovery' && activeUpload && (
         <Interrupted
           upload={activeUpload}
           onReleased={() => {
@@ -168,7 +173,9 @@ export function App() {
           }}
         />
       )}
-      {(['form', 'uploading', 'partial', 'success'] as Screen[]).includes(screen) && (
+      {(['form', 'uploading', 'interrupted', 'partial', 'success'] as Screen[]).includes(
+        screen,
+      ) && (
         <UploadWorkspace
           session={session}
           initialScreen={screen as WorkspaceScreen}

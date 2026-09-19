@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { normalizePlayerName, type Player } from '../shared/domain';
 
 export function PlayerCombobox({
@@ -19,9 +19,18 @@ export function PlayerCombobox({
   const id = useId();
   const [query, setQuery] = useState(selected?.displayName ?? '');
   const [open, setOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(-1);
   const [error, setError] = useState('');
+  const previousSelection = useRef(selected);
   useEffect(() => {
-    setQuery(selected?.displayName ?? '');
+    setQuery((current) => {
+      if (selected) return selected.displayName;
+      return normalizePlayerName(current) ===
+        normalizePlayerName(previousSelection.current?.displayName ?? '')
+        ? ''
+        : current;
+    });
+    previousSelection.current = selected;
   }, [selected]);
   const matches = useMemo(() => {
     const normalized = normalizePlayerName(query);
@@ -30,9 +39,12 @@ export function PlayerCombobox({
   const exact = players.some(
     (entry) => normalizePlayerName(entry.displayName) === normalizePlayerName(query),
   );
+  const canAdd = Boolean(query.trim()) && !exact;
+  const optionCount = matches.length + (canAdd ? 1 : 0);
   function choose(player: Player) {
     setQuery(player.displayName);
     setOpen(false);
+    setActiveIndex(-1);
     setError('');
     onSelect(player);
   }
@@ -43,6 +55,20 @@ export function PlayerCombobox({
       setError(caught instanceof Error ? caught.message : 'Could not add Player.');
     }
   }
+  function moveActive(direction: 1 | -1) {
+    setOpen(true);
+    setActiveIndex((current) => {
+      if (!optionCount) return -1;
+      if (current < 0) return direction === 1 ? 0 : optionCount - 1;
+      return (current + direction + optionCount) % optionCount;
+    });
+  }
+  const activeOptionId =
+    activeIndex < 0
+      ? undefined
+      : activeIndex < matches.length
+        ? `${id}-option-${activeIndex}`
+        : `${id}-add`;
   return (
     <div className="combobox-field">
       <label htmlFor={id}>{label}</label>
@@ -51,7 +77,9 @@ export function PlayerCombobox({
         role="combobox"
         aria-expanded={open}
         aria-controls={`${id}-list`}
+        aria-activedescendant={open ? activeOptionId : undefined}
         aria-autocomplete="list"
+        aria-describedby={error ? `${id}-error` : undefined}
         autoComplete="off"
         disabled={disabled}
         required
@@ -61,6 +89,7 @@ export function PlayerCombobox({
         onChange={(event) => {
           setQuery(event.target.value);
           setOpen(true);
+          setActiveIndex(-1);
           if (
             normalizePlayerName(event.target.value) !==
             normalizePlayerName(selected?.displayName ?? '')
@@ -68,11 +97,23 @@ export function PlayerCombobox({
             onSelect(null);
         }}
         onKeyDown={(event) => {
-          if (event.key === 'Escape') setOpen(false);
+          if (event.key === 'Escape') {
+            setOpen(false);
+            setActiveIndex(-1);
+          }
           if (event.key === 'ArrowDown') {
             event.preventDefault();
-            setOpen(true);
-            document.getElementById(`${id}-option-0`)?.focus();
+            moveActive(1);
+          }
+          if (event.key === 'ArrowUp') {
+            event.preventDefault();
+            moveActive(-1);
+          }
+          if (event.key === 'Enter' && open && activeIndex >= 0) {
+            event.preventDefault();
+            const player = matches[activeIndex];
+            if (player) choose(player);
+            else void add();
           }
         }}
       />
@@ -83,26 +124,22 @@ export function PlayerCombobox({
               id={`${id}-option-${index}`}
               type="button"
               role="option"
+              tabIndex={-1}
               aria-selected={selected?.id === entry.id}
               key={entry.id}
               onMouseDown={(event) => event.preventDefault()}
               onClick={() => choose(entry)}
-              onKeyDown={(event) => {
-                if (event.key === 'ArrowDown')
-                  document.getElementById(`${id}-option-${index + 1}`)?.focus();
-                if (event.key === 'ArrowUp')
-                  (index
-                    ? document.getElementById(`${id}-option-${index - 1}`)
-                    : document.getElementById(id)
-                  )?.focus();
-              }}
             >
               {entry.displayName}
             </button>
           ))}
-          {query.trim() && !exact && (
+          {canAdd && (
             <button
+              id={`${id}-add`}
               type="button"
+              role="option"
+              aria-selected={activeIndex === matches.length}
+              tabIndex={-1}
               className="add-option"
               onMouseDown={(event) => event.preventDefault()}
               onClick={() => void add()}
@@ -114,7 +151,7 @@ export function PlayerCombobox({
         </div>
       )}
       {error && (
-        <small className="field-error" role="alert">
+        <small id={`${id}-error`} className="field-error" role="alert">
           {error}
         </small>
       )}
