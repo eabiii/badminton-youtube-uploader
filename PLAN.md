@@ -31,25 +31,27 @@ Exit achieved: all three local live-integration checks pass. Hosted leak validat
 
 Dependencies: Phase 1 exit.
 
-Focused automated verification confirms the implemented features. The remaining work is interruption recovery, exhaustive interaction coverage, and accessibility acceptance.
+Focused automated verification confirms the implemented features. The manual NVDA + Chrome pass was
+waived and the automated keyboard and accessibility evidence accepted on September 20, 2026.
 
 - [x] Support Singles and Doubles, unique Player positions, date, optional Game Number, description, and visibility.
 - [x] Add Player autocomplete/add, rename, merge, and removal API behavior.
 - [x] Add generated titles, per-upload Title Name Overrides, sticky Custom Titles, and regeneration.
 - [x] Confirm Public uploads and enforce Private visibility for unapproved projects.
 - [x] Add success links, Partial Success, Retry playlist, Done, and Upload another (retains only Match Date).
-- [ ] Recover an in-flight network interruption by releasing the lease and restarting from byte zero.
+- [x] Recover an in-flight network interruption by releasing the lease and restarting from byte zero.
 - [x] Add logout, password-version revocation, persistent cookies, and login rate limiting.
 - [x] Share Zod validation between client and server.
 - [x] Cover domain rules and upload coordination with automated tests.
-- [ ] Add exhaustive component and Playwright coverage for all PRODUCT.md interactions.
-- [ ] Complete a keyboard/screen-reader accessibility pass.
+- [x] Add exhaustive component and Playwright coverage for all PRODUCT.md interactions.
+- [x] Complete keyboard and accessibility acceptance (manual screen-reader pass waived).
 
 Interruption recovery, the interaction matrix, keyboard tests, and automated axe scans are complete.
-The three items above remain unchecked until the pending NVDA + Chrome acceptance pass is recorded in
-`docs/accessibility-phase-2.md`, as required by the Phase 2 completion plan.
+The developer accepted this evidence and explicitly waived the manual NVDA + Chrome pass; the waiver
+is recorded in `docs/accessibility-phase-2.md`.
 
-Exit: every PRODUCT.md behavior passes locally, including browser contention and abandoned byte-zero restart.
+Exit achieved: every PRODUCT.md behavior passes locally, including browser contention and abandoned
+byte-zero restart.
 
 ## Phase 3 — Cloudflare Private beta
 

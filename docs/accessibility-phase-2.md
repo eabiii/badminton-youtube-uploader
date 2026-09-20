@@ -25,19 +25,19 @@ pnpm test:e2e
 
 ## NVDA + Chrome acceptance
 
-Status: Pending. NVDA is not installed in the available Windows host, so a genuine NVDA pass cannot
-be recorded from this workspace. Do not check the Phase 2 accessibility item or declare the Phase 2
-exit until an Uploader completes and records this pass.
+Status: Waived and accepted on September 20, 2026. NVDA is not installed in the available Windows
+host, so a genuine NVDA pass was not performed. The developer explicitly accepted the automated
+keyboard and axe evidence as sufficient to close Phase 2.
 
-Environment to record:
+Available environment at waiver time:
 
-- Windows version:
-- Chrome version:
-- NVDA version:
-- Tester:
-- Date:
+- Windows version: Microsoft Windows NT 10.0.22631.0
+- Chrome version: 153.0.8010.48
+- NVDA version: Not installed
+- Tester: Not applicable
+- Date: Not performed
 
-Keyboard-only and NVDA checklist:
+Waived keyboard-only and NVDA checklist (not performed):
 
 - [ ] Sign in, including incorrect-password and rate-limit announcements.
 - [ ] Complete the Game Upload form and select or add Players through autocomplete.
@@ -53,4 +53,6 @@ Keyboard-only and NVDA checklist:
 
 Result and notes:
 
-Pending.
+Manual NVDA acceptance was skipped by explicit developer decision. This is a waiver, not evidence
+that the application was exercised with NVDA. The automated acceptance above is the recorded Phase 2
+accessibility evidence.
