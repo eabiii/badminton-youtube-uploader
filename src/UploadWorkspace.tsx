@@ -5,12 +5,15 @@ import {
   MAX_VIDEO_BYTES,
   gameUploadMetadataSchema,
   type Player,
+  type QueuingEntry,
   type UploadView,
 } from '../shared/domain';
 import type { Session } from './App';
 import { ApiError, api } from './api';
 import { ManagePlayersDialog } from './ManagePlayersDialog';
+import { ManageQueuingDirectoryDialog } from './ManageQueuingDirectoryDialog';
 import { PlayerCombobox } from './PlayerCombobox';
+import { QueuingCombobox } from './QueuingCombobox';
 import { ScreenHeading } from './ScreenHeading';
 import { useUploadFormState } from './upload-form-state';
 
@@ -31,7 +34,9 @@ export function UploadWorkspace({
 }) {
   const { state, dispatch, count, generatedTitle } = useUploadFormState();
   const [players, setPlayers] = useState<Player[]>([]);
-  const [manageOpen, setManageOpen] = useState(false);
+  const [queuingEntries, setQueuingEntries] = useState<QueuingEntry[]>([]);
+  const [managePlayersOpen, setManagePlayersOpen] = useState(false);
+  const [manageQueuingOpen, setManageQueuingOpen] = useState(false);
   const [error, setError] = useState('');
   const [progress, setProgress] = useState(initialUpload?.uploadedBytes ?? 0);
   const [upload, setUpload] = useState<UploadView | null>(initialUpload);
@@ -39,11 +44,16 @@ export function UploadWorkspace({
   const [draggingVideo, setDraggingVideo] = useState(false);
   const uploadAbort = useRef<AbortController | null>(null);
   useEffect(() => {
-    void refreshPlayers();
+    void refreshDirectories();
   }, []);
-  async function refreshPlayers() {
+  async function refreshDirectories() {
     try {
-      setPlayers((await api.players()).players);
+      const [playerResult, queuingResult] = await Promise.all([
+        api.players(),
+        api.queuingEntries(),
+      ]);
+      setPlayers(playerResult.players);
+      setQueuingEntries(queuingResult.queuingEntries);
     } catch (caught) {
       setError(message(caught));
     }
@@ -77,6 +87,28 @@ export function UploadWorkspace({
     setPlayers((current) => current.filter((entry) => entry.id !== player.id));
     dispatch({ type: 'remove', id: player.id });
   }
+  const sortQueuingEntries = (entries: QueuingEntry[]) =>
+    [...entries].sort(
+      (a, b) =>
+        a.name.localeCompare(b.name, 'und', { sensitivity: 'base' }) ||
+        a.location.localeCompare(b.location, 'und', { sensitivity: 'base' }) ||
+        a.id.localeCompare(b.id),
+    );
+  async function addQueuingEntry(name: string, location: string) {
+    const created = await api.addQueuingEntry(name, location);
+    setQueuingEntries((current) => sortQueuingEntries([...current, created]));
+    return created;
+  }
+  async function updateQueuingEntry(previous: QueuingEntry, name: string, location: string) {
+    const updated = await api.updateQueuingEntry(previous.id, name, location);
+    setQueuingEntries((current) =>
+      sortQueuingEntries(current.map((entry) => (entry.id === updated.id ? updated : entry))),
+    );
+  }
+  async function removeQueuingEntry(entry: QueuingEntry) {
+    await api.removeQueuingEntry(entry.id);
+    setQueuingEntries((current) => current.filter((candidate) => candidate.id !== entry.id));
+  }
 
   function selectVideo(files: FileList | null) {
     if (!files?.length) return;
@@ -107,19 +139,32 @@ export function UploadWorkspace({
       setError('Select one MP4 file.');
       return;
     }
-    const parsed = gameUploadMetadataSchema.safeParse({
+    const common = {
       fileName: state.file.name,
       fileSize: state.file.size,
       mimeType: state.file.type,
-      matchType: state.matchType,
-      players: state.players.slice(0, count).map((entry) => entry?.displayName ?? ''),
-      titleNames: state.titleNames.slice(0, count),
       matchDate: state.matchDate,
       gameNumber: state.gameNumber ? Number(state.gameNumber) : undefined,
       title: state.title.value,
       description: state.description,
       requestedVisibility: state.visibility,
-    });
+    };
+    const parsed = gameUploadMetadataSchema.safeParse(
+      state.titleFormat === 'player_match'
+        ? {
+            ...common,
+            titleFormat: 'player_match',
+            matchType: state.matchType,
+            players: state.players.slice(0, count).map((entry) => entry?.displayName ?? ''),
+            titleNames: state.titleNames.slice(0, count),
+          }
+        : {
+            ...common,
+            titleFormat: 'queuing_session',
+            queuingName: state.queuingEntry?.name ?? '',
+            queueLocation: state.queuingEntry?.location ?? '',
+          },
+    );
     if (!parsed.success) {
       setError(parsed.error.issues[0]?.message ?? 'Check the Game Upload.');
       return;
@@ -288,9 +333,23 @@ export function UploadWorkspace({
           <ScreenHeading>Publish one badminton Game</ScreenHeading>
         </div>
         <div className="heading-actions">
-          <button className="secondary" disabled={uploading} onClick={() => setManageOpen(true)}>
-            Manage Players
-          </button>
+          {state.titleFormat === 'player_match' ? (
+            <button
+              className="secondary"
+              disabled={uploading}
+              onClick={() => setManagePlayersOpen(true)}
+            >
+              Manage Players
+            </button>
+          ) : (
+            <button
+              className="secondary"
+              disabled={uploading}
+              onClick={() => setManageQueuingOpen(true)}
+            >
+              Manage Queuing Directory
+            </button>
+          )}
           <p className="mode-badge">
             {session.publisherMode === 'fake' ? 'Local fake publisher' : 'YouTube'}
           </p>
@@ -339,25 +398,47 @@ export function UploadWorkspace({
           )}
         </section>
         <section>
-          <h2>Match</h2>
-          <div className="field-grid">
-            <label>
-              Match Type
-              <select
-                value={state.matchType}
-                disabled={uploading}
-                onChange={(event) =>
-                  dispatch({
-                    type: 'field',
-                    field: 'matchType',
-                    value: event.target.value as typeof state.matchType,
-                  })
-                }
-              >
-                <option>Singles Match</option>
-                <option>Doubles Match</option>
-              </select>
-            </label>
+          <fieldset className="title-format">
+            <legend>Title format</legend>
+            <div className="radio-cards">
+              <label className="radio-card">
+                <input
+                  type="radio"
+                  name="title-format"
+                  value="player_match"
+                  checked={state.titleFormat === 'player_match'}
+                  disabled={uploading}
+                  onChange={() =>
+                    dispatch({ type: 'field', field: 'titleFormat', value: 'player_match' })
+                  }
+                />
+                <span>
+                  <strong>Player Match</strong>
+                  <small>Build the title from the selected Players and match classification.</small>
+                </span>
+              </label>
+              <label className="radio-card">
+                <input
+                  type="radio"
+                  name="title-format"
+                  value="queuing_session"
+                  checked={state.titleFormat === 'queuing_session'}
+                  disabled={uploading}
+                  onChange={() =>
+                    dispatch({ type: 'field', field: 'titleFormat', value: 'queuing_session' })
+                  }
+                />
+                <span>
+                  <strong>Queuing Session</strong>
+                  <small>Build the title from a saved Queuing Directory entry.</small>
+                </span>
+              </label>
+            </div>
+          </fieldset>
+        </section>
+        <section>
+          <h2>Game details</h2>
+          <div className="field-grid common-game-fields">
             <label>
               Match Date
               <input
@@ -384,30 +465,61 @@ export function UploadWorkspace({
               />
             </label>
           </div>
-          <div className="players">
-            {Array.from({ length: count }, (_, index) => (
-              <div className="player-row" key={index}>
-                <PlayerCombobox
-                  label={`Player ${index + 1}`}
-                  players={players}
-                  selected={state.players[index]}
+          {state.titleFormat === 'player_match' ? (
+            <>
+              <label className="match-type-field">
+                Match Type
+                <select
+                  value={state.matchType}
                   disabled={uploading}
-                  onAdd={addPlayer}
-                  onSelect={(player) => dispatch({ type: 'player', index, player })}
-                />
-                <label>
-                  Title Name Override <span className="optional">This upload only</span>
-                  <input
-                    value={state.titleNames[index]}
-                    disabled={uploading || !state.players[index]}
-                    onChange={(event) =>
-                      dispatch({ type: 'titleName', index, value: event.target.value })
-                    }
-                  />
-                </label>
+                  onChange={(event) =>
+                    dispatch({
+                      type: 'field',
+                      field: 'matchType',
+                      value: event.target.value as typeof state.matchType,
+                    })
+                  }
+                >
+                  <option>Singles Match</option>
+                  <option>Doubles Match</option>
+                </select>
+              </label>
+              <div className="players">
+                {Array.from({ length: count }, (_, index) => (
+                  <div className="player-row" key={index}>
+                    <PlayerCombobox
+                      label={`Player ${index + 1}`}
+                      players={players}
+                      selected={state.players[index]}
+                      disabled={uploading}
+                      onAdd={addPlayer}
+                      onSelect={(player) => dispatch({ type: 'player', index, player })}
+                    />
+                    <label>
+                      Title Name Override <span className="optional">This upload only</span>
+                      <input
+                        value={state.titleNames[index]}
+                        disabled={uploading || !state.players[index]}
+                        onChange={(event) =>
+                          dispatch({ type: 'titleName', index, value: event.target.value })
+                        }
+                      />
+                    </label>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            </>
+          ) : (
+            <div className="queuing-field">
+              <QueuingCombobox
+                entries={queuingEntries}
+                selected={state.queuingEntry}
+                disabled={uploading}
+                onAdd={addQueuingEntry}
+                onSelect={(entry) => dispatch({ type: 'queuingEntry', entry })}
+              />
+            </div>
+          )}
         </section>
         <section>
           <h2>YouTube details</h2>
@@ -491,12 +603,19 @@ export function UploadWorkspace({
         )}
       </form>
       <ManagePlayersDialog
-        open={manageOpen}
+        open={managePlayersOpen}
         players={players}
-        onClose={() => setManageOpen(false)}
+        onClose={() => setManagePlayersOpen(false)}
         onRename={renamePlayer}
         onMerge={mergePlayer}
         onRemove={removePlayer}
+      />
+      <ManageQueuingDirectoryDialog
+        open={manageQueuingOpen}
+        entries={queuingEntries}
+        onClose={() => setManageQueuingOpen(false)}
+        onUpdate={updateQueuingEntry}
+        onRemove={removeQueuingEntry}
       />
     </main>
   );

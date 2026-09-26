@@ -1,4 +1,4 @@
-import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
+import { integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 
 export const sessions = sqliteTable('sessions', {
   tokenHash: text('token_hash').primaryKey(),
@@ -27,6 +27,24 @@ export const players = sqliteTable('players', {
   normalizedName: text('normalized_name').notNull().unique(),
   createdAt: integer('created_at').notNull(),
 });
+
+export const queuingEntries = sqliteTable(
+  'queuing_entries',
+  {
+    id: text('id').primaryKey(),
+    name: text('name').notNull(),
+    location: text('location').notNull(),
+    normalizedName: text('normalized_name').notNull(),
+    normalizedLocation: text('normalized_location').notNull(),
+    createdAt: integer('created_at').notNull(),
+  },
+  (table) => [
+    uniqueIndex('queuing_entries_normalized_name_location_unique').on(
+      table.normalizedName,
+      table.normalizedLocation,
+    ),
+  ],
+);
 
 export const loginAttempts = sqliteTable('login_attempts', {
   clientHash: text('client_hash').primaryKey(),

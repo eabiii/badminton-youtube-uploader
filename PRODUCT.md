@@ -17,8 +17,9 @@ Badminton Uploader is a simple, English-only desktop web application for publish
 The form accepts one upload at a time and contains:
 
 - One MP4 file no larger than 2 GB, selected with the file picker or drag and drop.
-- Match Type: `Singles Match` or `Doubles Match`, defaulting to `Doubles Match`.
-- Two unique Players for Singles or four unique Players for Doubles.
+- Title format: `Player Match` or `Queuing Session`, defaulting to `Player Match`.
+- For Player Match, Match Type (`Singles Match` or `Doubles Match`, defaulting to `Doubles Match`) and two unique Players for Singles or four unique Players for Doubles.
+- For Queuing Session, one required saved Queuing Directory entry containing a Queuing Name and Queue Location.
 - A required, explicitly selected Match Date.
 - An optional Game Number that starts blank.
 - A generated title with a live character count and a 100-character maximum.
@@ -41,7 +42,15 @@ With Game Number:
 
 `Player 1/Player 2 vs Player 3/Player 4 | Doubles Match | Game 2 | September 7, 2026`
 
-Month names are always English. An Uploader may shorten a Player name for the current upload without changing the Player Directory. The Uploader may also freely edit the final title; after it becomes a Custom Title, changes to structured fields preserve it until the Uploader explicitly regenerates it.
+Queuing Session without Game Number:
+
+`GOODSHOTS! | Gameville Central Park | September 15, 2026`
+
+Queuing Session with Game Number:
+
+`GOODSHOTS! | Gameville Central Park | Game 1 | September 15, 2026`
+
+Month names are always English. An Uploader may shorten a Player name for the current upload without changing the Player Directory. The Uploader may also freely edit the final title; after it becomes a Custom Title, changes to structured fields or Title format preserve it until the Uploader explicitly regenerates it from the currently selected format.
 
 ## Player Directory
 
@@ -50,6 +59,14 @@ Month names are always English. An Uploader may shorten a Player name for the cu
 - Uploaders can rename, merge, or remove Players.
 - Names are trimmed and compared case-insensitively for uniqueness while retaining entered capitalization.
 - The same Player cannot occupy more than one position in a Game.
+
+## Queuing Directory
+
+- Queuing Session selection provides autocomplete that searches both Queuing Name and Queue Location and displays `Queuing Name — Queue Location`.
+- An Uploader can add a Queuing entry from the Game Upload form and can edit both fields or remove entries in Manage Queuing Directory.
+- Queuing Name and Queue Location are both required. Values are trimmed, Unicode NFKC-normalized, and compared with locale-independent case folding.
+- The Queuing Name and Queue Location pair is unique; the same Queuing Name may be used at different Queue Locations.
+- Selecting an entry snapshots its Queuing Name and Queue Location for the active Game Upload. Later directory edits or removal affect subsequent selections only.
 
 ## Upload lifecycle
 
@@ -63,11 +80,13 @@ Month names are always English. An Uploader may shorten a Player name for the cu
 - If the YouTube video succeeds but playlist addition fails, the current screen offers Retry playlist addition or Accept partial success. Retry never uploads the video again.
 - Success means YouTube accepted the video and playlist addition succeeded; processing and copyright checks continue in YouTube Studio.
 - The success screen shows the YouTube watch link and direct YouTube Studio edit link, followed by Done and Upload another.
-- Upload another retains only Match Date. File, Players, Match Type, Game Number, title state, Description, and Visibility reset.
+- Switching Title format preserves each format's unfinished fields. Custom Titles remain unchanged until explicitly regenerated.
+- After a Player Match upload, Upload another retains only Match Date and returns to the default Player Match form state. File, Players, Match Type, Game Number, title state, Description, and Visibility reset.
+- After a Queuing Session upload, Upload another retains Queuing Session format, the selected Queuing entry snapshot, and Match Date. File, Game Number, title state, Description, and Visibility reset.
 
 ## Data retention and excluded capabilities
 
-- Persist only the Player Directory, authentication/session data, and the global upload lock.
+- Persist only the Player Directory, Queuing Directory, authentication/session data, and the global upload lock.
 - Do not retain video files or completed Game Upload metadata.
 - Do not provide upload history, duplicate-title detection, post-upload correction, deletion, scheduling, batch selection, or an upload queue.
 - All post-upload changes and video deletion occur in YouTube Studio.

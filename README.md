@@ -8,7 +8,7 @@ Requirements: Node.js 24+ and pnpm 12+.
 
 ```sh
 pnpm install
-pnpm wrangler d1 migrations apply badminton-youtube-uploader-local --local
+pnpm exec wrangler d1 migrations apply badminton-youtube-uploader-local --local
 pnpm password:hash
 cp .dev.vars.example .dev.vars
 ```
@@ -22,6 +22,27 @@ pnpm dev
 Local development uses the deterministic fake YouTube publisher. It accepts bytes and returns stable fake video links without contacting YouTube.
 
 Sessions have no server-side time expiry and remain revocable. Because browsers impose cookie lifetime limits, the secure, HTTP-only session cookie uses a rolling 400-day maximum that is refreshed on every authenticated request. Increment `PASSWORD_VERSION` whenever the deployed shared password changes to invalidate every existing session.
+
+### Database migrations
+
+After pulling or creating a new numbered file in `migrations/`, check for pending local D1 migrations and apply them before starting or restarting the application:
+
+```sh
+pnpm exec wrangler d1 migrations list badminton-youtube-uploader-local --local
+pnpm exec wrangler d1 migrations apply badminton-youtube-uploader-local --local
+pnpm dev
+```
+
+Do not edit a migration that may already have been applied. Add a new numbered migration instead so existing databases can advance safely. A missing-table `500` response from a newly added API route usually means its migration is still pending.
+
+For a deployed D1 database, first verify that `wrangler.jsonc` identifies the intended environment and database. Then inspect and apply migrations with `--remote` instead of `--local`:
+
+```sh
+pnpm exec wrangler d1 migrations list badminton-youtube-uploader-local --remote
+pnpm exec wrangler d1 migrations apply badminton-youtube-uploader-local --remote
+```
+
+Remote migrations change deployed data and should not be run against an unverified database target.
 
 ## Live test configuration
 

@@ -9,6 +9,7 @@ export const MAX_TITLE_CHARACTERS = 100;
 export const SESSION_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 400;
 
 export const matchTypeSchema = z.enum(['Singles Match', 'Doubles Match']);
+export const titleFormatSchema = z.enum(['player_match', 'queuing_session']);
 export const visibilitySchema = z.enum(['Private', 'Unlisted', 'Public']);
 
 export function normalizePlayerDisplayName(name: string): string {
@@ -36,33 +37,85 @@ export const playerMutationSchema = z.object({ displayName: playerDisplayNameSch
 export const playerMergeSchema = z.object({ targetPlayerId: z.string().min(1) }).strict();
 export const playerListResponseSchema = z.object({ players: z.array(playerSchema) });
 
-export const gameUploadMetadataSchema = z
+export function normalizeQueuingDisplayValue(value: string): string {
+  return value.trim().normalize('NFKC');
+}
+
+export function normalizeQueuingValue(value: string): string {
+  return caseFold(normalizeQueuingDisplayValue(value));
+}
+
+const queuingValueSchema = (label: 'Queuing Name' | 'Queue Location') =>
+  z
+    .string()
+    .transform(normalizeQueuingDisplayValue)
+    .pipe(
+      z.string().min(1, `Enter a ${label}.`).max(200, `${label} must be at most 200 characters.`),
+    );
+
+export const queuingNameSchema = queuingValueSchema('Queuing Name');
+export const queueLocationSchema = queuingValueSchema('Queue Location');
+export const queuingEntrySchema = z.object({
+  id: z.string().min(1),
+  name: queuingNameSchema,
+  location: queueLocationSchema,
+});
+export const queuingEntryMutationSchema = z
+  .object({ name: queuingNameSchema, location: queueLocationSchema })
+  .strict();
+export const queuingEntryListResponseSchema = z.object({
+  queuingEntries: z.array(queuingEntrySchema),
+});
+
+const commonUploadFields = {
+  fileName: z.string().trim().min(1, 'Select one MP4 file.'),
+  fileSize: z
+    .number()
+    .int()
+    .positive('The MP4 file must not be empty.')
+    .max(MAX_VIDEO_BYTES, 'The MP4 file must be no larger than 2 GB.'),
+  mimeType: z.literal('video/mp4', { error: 'Select an MP4 file.' }),
+  matchDate: z.iso.date('Select a Match Date.'),
+  gameNumber: z
+    .number()
+    .int('Game Number must be a positive whole number.')
+    .positive('Game Number must be a positive whole number.')
+    .optional(),
+  title: z
+    .string()
+    .trim()
+    .min(1, 'Enter a title.')
+    .max(MAX_TITLE_CHARACTERS, 'Titles must be at most 100 characters.'),
+  description: z.string().max(5_000, 'Descriptions must be at most 5,000 characters.'),
+  requestedVisibility: visibilitySchema,
+};
+
+const playerMatchUploadMetadataSchema = z
   .object({
-    fileName: z.string().trim().min(1, 'Select one MP4 file.'),
-    fileSize: z
-      .number()
-      .int()
-      .positive('The MP4 file must not be empty.')
-      .max(MAX_VIDEO_BYTES, 'The MP4 file must be no larger than 2 GB.'),
-    mimeType: z.literal('video/mp4', { error: 'Select an MP4 file.' }),
+    ...commonUploadFields,
+    titleFormat: z.literal('player_match'),
     matchType: matchTypeSchema,
     players: z.array(playerDisplayNameSchema).min(2).max(4),
     titleNames: z.array(playerDisplayNameSchema).min(2).max(4),
-    matchDate: z.iso.date('Select a Match Date.'),
-    gameNumber: z
-      .number()
-      .int('Game Number must be a positive whole number.')
-      .positive('Game Number must be a positive whole number.')
-      .optional(),
-    title: z
-      .string()
-      .trim()
-      .min(1, 'Enter a title.')
-      .max(MAX_TITLE_CHARACTERS, 'Titles must be at most 100 characters.'),
-    description: z.string().max(5_000, 'Descriptions must be at most 5,000 characters.'),
-    requestedVisibility: visibilitySchema,
   })
+  .strict();
+
+const queuingSessionUploadMetadataSchema = z
+  .object({
+    ...commonUploadFields,
+    titleFormat: z.literal('queuing_session'),
+    queuingName: queuingNameSchema,
+    queueLocation: queueLocationSchema,
+  })
+  .strict();
+
+export const gameUploadMetadataSchema = z
+  .discriminatedUnion('titleFormat', [
+    playerMatchUploadMetadataSchema,
+    queuingSessionUploadMetadataSchema,
+  ])
   .superRefine((value, context) => {
+    if (value.titleFormat !== 'player_match') return;
     const expected = value.matchType === 'Singles Match' ? 2 : 4;
     if (value.players.length !== expected || value.titleNames.length !== expected) {
       context.addIssue({
@@ -92,8 +145,10 @@ export const sessionResponseSchema = z.object({
 });
 
 export type Player = z.infer<typeof playerSchema>;
+export type QueuingEntry = z.infer<typeof queuingEntrySchema>;
 export type GameUploadMetadata = z.infer<typeof gameUploadMetadataSchema>;
 export type MatchType = z.infer<typeof matchTypeSchema>;
+export type TitleFormat = z.infer<typeof titleFormatSchema>;
 export type Visibility = z.infer<typeof visibilitySchema>;
 
 export function formatMatchDate(date: string): string {
@@ -105,9 +160,26 @@ export function formatMatchDate(date: string): string {
   }).format(new Date(`${date}T00:00:00Z`));
 }
 
-export function generateTitle(
-  input: Pick<GameUploadMetadata, 'matchType' | 'titleNames' | 'matchDate' | 'gameNumber'>,
-): string {
+export type TitleGenerationInput =
+  | {
+      titleFormat: 'player_match';
+      matchType: MatchType;
+      titleNames: string[];
+      matchDate: string;
+      gameNumber?: number;
+    }
+  | {
+      titleFormat: 'queuing_session';
+      queuingName: string;
+      queueLocation: string;
+      matchDate: string;
+      gameNumber?: number;
+    };
+
+export function generateTitle(input: TitleGenerationInput): string {
+  if (input.titleFormat === 'queuing_session') {
+    return `${input.queuingName} | ${input.queueLocation}${input.gameNumber ? ` | Game ${input.gameNumber}` : ''} | ${formatMatchDate(input.matchDate)}`;
+  }
   const names =
     input.matchType === 'Singles Match'
       ? `${input.titleNames[0]} vs ${input.titleNames[1]}`

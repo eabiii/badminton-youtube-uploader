@@ -288,6 +288,55 @@ small,
   grid-template-columns: 1.5fr 1fr 1fr;
   gap: 18px;
 }
+.common-game-fields {
+  grid-template-columns: 1fr 1fr;
+}
+.title-format {
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+.title-format legend {
+  font-family: Georgia, serif;
+  font-size: 22px;
+  font-weight: 600;
+  margin-bottom: 20px;
+}
+.radio-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.radio-card {
+  display: flex;
+  grid-template-columns: auto 1fr;
+  align-items: start;
+  gap: 12px;
+  border: 1px solid #cbd5ce;
+  border-radius: 10px;
+  padding: 16px;
+  cursor: pointer;
+}
+.radio-card:has(input:checked) {
+  border-color: #247249;
+  background: #f0f7f2;
+  box-shadow: 0 0 0 2px rgba(36, 114, 73, 0.12);
+}
+.radio-card input {
+  width: auto;
+  margin-top: 3px;
+}
+.radio-card span {
+  display: grid;
+  gap: 4px;
+}
+.radio-card small {
+  line-height: 1.4;
+}
+.match-type-field,
+.queuing-field {
+  margin-top: 18px;
+}
 .players {
   margin-top: 22px;
   display: grid;
@@ -437,6 +486,19 @@ progress {
 .dialog-actions {
   display: flex;
   justify-content: end;
+}
+.small-dialog {
+  width: min(520px, calc(100vw - 80px));
+}
+.small-dialog label + label {
+  margin-top: 18px;
+}
+.queuing-directory-row {
+  grid-template-columns: 1fr 1fr auto auto;
+}
+.directory-entry-name {
+  grid-column: 1 / -1;
+  font-weight: 750;
 }
 .empty {
   color: #67726c;

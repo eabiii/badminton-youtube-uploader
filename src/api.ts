@@ -3,10 +3,13 @@ import {
   errorResponseSchema,
   playerListResponseSchema,
   playerSchema,
+  queuingEntryListResponseSchema,
+  queuingEntrySchema,
   sessionResponseSchema,
   uploadViewSchema,
   type GameUploadMetadata,
   type Player,
+  type QueuingEntry,
 } from '../shared/domain';
 
 export class ApiError extends Error {
@@ -69,6 +72,17 @@ export const api = {
     ),
   removePlayer: (id: string) =>
     request(`/api/players/${encodeURIComponent(id)}`, z.void(), { method: 'DELETE' }),
+  queuingEntries: () => request('/api/queuing-entries', queuingEntryListResponseSchema),
+  addQueuingEntry: (name: string, location: string) =>
+    request('/api/queuing-entries', queuingEntrySchema, json({ name, location }, 'POST')),
+  updateQueuingEntry: (id: string, name: string, location: string) =>
+    request(
+      `/api/queuing-entries/${encodeURIComponent(id)}`,
+      queuingEntrySchema,
+      json({ name, location }, 'PATCH'),
+    ),
+  removeQueuingEntry: (id: string) =>
+    request(`/api/queuing-entries/${encodeURIComponent(id)}`, z.void(), { method: 'DELETE' }),
   status: () => request('/api/upload/status', uploadStatusSchema),
   start: (metadata: GameUploadMetadata) =>
     request('/api/upload/start', uploadViewSchema, json(metadata, 'POST')),
@@ -89,4 +103,4 @@ export const api = {
     request(`/api/upload/${leaseId}/accept-partial-success`, z.void(), { method: 'POST' }),
 };
 
-export type { Player };
+export type { Player, QueuingEntry };

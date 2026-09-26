@@ -6,15 +6,19 @@ import {
   updateGeneratedTitle,
   type MatchType,
   type Player,
+  type QueuingEntry,
+  type TitleFormat,
   type TitleState,
   type Visibility,
 } from '../shared/domain';
 
 export type UploadFormState = {
   file: File | null;
+  titleFormat: TitleFormat;
   matchType: MatchType;
   players: (Player | null)[];
   titleNames: string[];
+  queuingEntry: QueuingEntry | null;
   matchDate: string;
   gameNumber: string;
   description: string;
@@ -25,10 +29,18 @@ export type UploadFormState = {
 export type UploadFormAction =
   | {
       type: 'field';
-      field: 'file' | 'matchType' | 'matchDate' | 'gameNumber' | 'description' | 'visibility';
-      value: File | MatchType | Visibility | string | null;
+      field:
+        | 'file'
+        | 'titleFormat'
+        | 'matchType'
+        | 'matchDate'
+        | 'gameNumber'
+        | 'description'
+        | 'visibility';
+      value: File | TitleFormat | MatchType | Visibility | string | null;
     }
   | { type: 'player'; index: number; player: Player | null }
+  | { type: 'queuingEntry'; entry: QueuingEntry | null }
   | { type: 'titleName'; index: number; value: string }
   | { type: 'generated'; value: string }
   | { type: 'editTitle'; value: string }
@@ -40,9 +52,11 @@ export type UploadFormAction =
 
 const initial = (matchDate = ''): UploadFormState => ({
   file: null,
+  titleFormat: 'player_match',
   matchType: 'Doubles Match',
   players: [null, null, null, null],
   titleNames: ['', '', '', ''],
+  queuingEntry: null,
   matchDate,
   gameNumber: '',
   description: '',
@@ -63,6 +77,7 @@ export function uploadFormReducer(
     titleNames[action.index] = action.player?.displayName ?? '';
     return { ...state, players, titleNames };
   }
+  if (action.type === 'queuingEntry') return { ...state, queuingEntry: action.entry };
   if (action.type === 'titleName') {
     const titleNames = [...state.titleNames];
     titleNames[action.index] = action.value;
@@ -98,6 +113,10 @@ export function uploadFormReducer(
     return { ...state, players, titleNames };
   }
   const reset = initial(action.retainDate ? state.matchDate : '');
+  if (action.retainDate && state.titleFormat === 'queuing_session') {
+    reset.titleFormat = 'queuing_session';
+    reset.queuingEntry = state.queuingEntry;
+  }
   reset.fileInputKey = state.fileInputKey + 1;
   return reset;
 }
@@ -106,15 +125,35 @@ export function useUploadFormState() {
   const [state, dispatch] = useReducer(uploadFormReducer, undefined, () => initial());
   const count = state.matchType === 'Singles Match' ? 2 : 4;
   const generatedTitle = useMemo(() => {
-    if (!state.matchDate || state.titleNames.slice(0, count).some((name) => !name.trim()))
-      return '';
+    if (!state.matchDate) return '';
+    const gameNumber = state.gameNumber ? Number(state.gameNumber) : undefined;
+    if (state.titleFormat === 'queuing_session') {
+      if (!state.queuingEntry) return '';
+      return generateTitle({
+        titleFormat: 'queuing_session',
+        queuingName: state.queuingEntry.name,
+        queueLocation: state.queuingEntry.location,
+        matchDate: state.matchDate,
+        gameNumber,
+      });
+    }
+    if (state.titleNames.slice(0, count).some((name) => !name.trim())) return '';
     return generateTitle({
+      titleFormat: 'player_match',
       matchType: state.matchType,
       titleNames: state.titleNames.slice(0, count),
       matchDate: state.matchDate,
-      gameNumber: state.gameNumber ? Number(state.gameNumber) : undefined,
+      gameNumber,
     });
-  }, [state.matchType, state.titleNames, state.matchDate, state.gameNumber, count]);
+  }, [
+    state.titleFormat,
+    state.matchType,
+    state.titleNames,
+    state.queuingEntry,
+    state.matchDate,
+    state.gameNumber,
+    count,
+  ]);
   useEffect(() => {
     dispatch({ type: 'generated', value: generatedTitle });
   }, [generatedTitle]);

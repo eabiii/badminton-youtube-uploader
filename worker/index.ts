@@ -1,10 +1,16 @@
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { loginRequestSchema, playerMergeSchema, playerMutationSchema } from '../shared/domain';
+import {
+  loginRequestSchema,
+  playerMergeSchema,
+  playerMutationSchema,
+  queuingEntryMutationSchema,
+} from '../shared/domain';
 import { createSession, requireSession, revokeSession, sha256, verifyPassword } from './auth';
 import type { Bindings } from './env';
 import { LoginThrottle } from './login-throttle';
 import { PlayerDirectory, PlayerDirectoryError } from './players';
+import { QueuingDirectory, QueuingDirectoryError } from './queuing-entries';
 import { UploadCoordinator, UploadError } from './upload/coordinator';
 import { FakeYouTubePublisher } from './upload/fake-publisher';
 import { D1LeaseRepository } from './upload/lease-repository';
@@ -59,6 +65,8 @@ app.use('/api/logout', requireSession);
 app.use('/api/upload/*', requireSession);
 app.use('/api/players', requireSession);
 app.use('/api/players/*', requireSession);
+app.use('/api/queuing-entries', requireSession);
+app.use('/api/queuing-entries/*', requireSession);
 
 app.get('/api/session', (context) =>
   context.json({
@@ -101,6 +109,29 @@ app.post('/api/players/:sourceId/merge', async (context) => {
 
 app.delete('/api/players/:id', async (context) => {
   await new PlayerDirectory(context.env.DB).remove(context.req.param('id'));
+  return context.body(null, 204);
+});
+
+app.get('/api/queuing-entries', async (context) => {
+  return context.json({
+    queuingEntries: await new QueuingDirectory(context.env.DB).list(),
+  });
+});
+
+app.post('/api/queuing-entries', async (context) => {
+  const body = queuingEntryMutationSchema.parse(await context.req.json().catch(() => null));
+  return context.json(await new QueuingDirectory(context.env.DB).add(body), 201);
+});
+
+app.patch('/api/queuing-entries/:id', async (context) => {
+  const body = queuingEntryMutationSchema.parse(await context.req.json().catch(() => null));
+  return context.json(
+    await new QueuingDirectory(context.env.DB).update(context.req.param('id'), body),
+  );
+});
+
+app.delete('/api/queuing-entries/:id', async (context) => {
+  await new QueuingDirectory(context.env.DB).remove(context.req.param('id'));
   return context.body(null, 204);
 });
 
@@ -166,6 +197,8 @@ app.onError((error, context) => {
     return context.json({ error: error.message, offset: error.offset }, error.status);
   }
   if (error instanceof PlayerDirectoryError)
+    return context.json({ error: error.message }, error.status);
+  if (error instanceof QueuingDirectoryError)
     return context.json({ error: error.message }, error.status);
   if (error instanceof z.ZodError)
     return context.json({ error: error.issues[0]?.message ?? 'Invalid request.' }, 400);

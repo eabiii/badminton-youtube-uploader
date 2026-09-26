@@ -6,6 +6,7 @@ const metadata = {
   fileName: 'game.mp4',
   fileSize: 3,
   mimeType: 'video/mp4' as const,
+  titleFormat: 'player_match' as const,
   matchType: 'Singles Match' as const,
   players: ['Alice', 'Bob'],
   titleNames: ['Alice', 'Bob'],

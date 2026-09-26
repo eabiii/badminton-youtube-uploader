@@ -4,15 +4,19 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { PlayerCombobox } from '../src/PlayerCombobox';
 import { ManagePlayersDialog } from '../src/ManagePlayersDialog';
+import { ManageQueuingDirectoryDialog } from '../src/ManageQueuingDirectoryDialog';
 import { uploadFormReducer, type UploadFormState } from '../src/upload-form-state';
+import { QueuingCombobox } from '../src/QueuingCombobox';
 
 const alice = { id: 'alice', displayName: 'Alice' };
 const bob = { id: 'bob', displayName: 'Bob' };
 const blank: UploadFormState = {
   file: null,
+  titleFormat: 'player_match',
   matchType: 'Singles Match',
   players: [alice, bob, null, null],
   titleNames: ['Al', 'Bob', '', ''],
+  queuingEntry: null,
   matchDate: '2026-09-07',
   gameNumber: '2',
   description: 'Final',
@@ -131,5 +135,105 @@ describe('Player upload interactions', () => {
     expect(reset.description).toBe('');
     expect(reset.visibility).toBe('Unlisted');
     expect(reset.title).toEqual({ value: '', isCustom: false });
+  });
+
+  it('preserves unfinished fields while switching modes and retains Queuing selection on Upload another', () => {
+    const entry = { id: 'queue-1', name: 'GOODSHOTS!', location: 'Central Park' };
+    const queuing = uploadFormReducer(
+      uploadFormReducer(blank, {
+        type: 'field',
+        field: 'titleFormat',
+        value: 'queuing_session',
+      }),
+      { type: 'queuingEntry', entry },
+    );
+    expect(queuing.players.slice(0, 2)).toEqual([alice, bob]);
+    expect(queuing.titleNames.slice(0, 2)).toEqual(['Al', 'Bob']);
+    const switchedBack = uploadFormReducer(queuing, {
+      type: 'field',
+      field: 'titleFormat',
+      value: 'player_match',
+    });
+    expect(switchedBack.queuingEntry).toEqual(entry);
+
+    const reset = uploadFormReducer(queuing, { type: 'reset', retainDate: true });
+    expect(reset.titleFormat).toBe('queuing_session');
+    expect(reset.queuingEntry).toEqual(entry);
+    expect(reset.matchDate).toBe('2026-09-07');
+    expect(reset.file).toBeNull();
+    expect(reset.gameNumber).toBe('');
+    expect(reset.description).toBe('');
+    expect(reset.visibility).toBe('Unlisted');
+    expect(reset.title).toEqual({ value: '', isCustom: false });
+  });
+
+  it('searches Queuing entries by location and adds a new entry from a dialog', async () => {
+    const user = userEvent.setup();
+    const select = vi.fn();
+    const add = vi.fn(async (name: string, location: string) => ({
+      id: 'queue-2',
+      name: name.trim(),
+      location: location.trim(),
+    }));
+    render(
+      <QueuingCombobox
+        entries={[{ id: 'queue-1', name: 'GOODSHOTS!', location: 'Central Park' }]}
+        selected={null}
+        disabled={false}
+        onSelect={select}
+        onAdd={add}
+      />,
+    );
+    const input = screen.getByRole('combobox', { name: 'Queuing Session' });
+    await user.type(input, 'Central');
+    await user.keyboard('{ArrowDown}{Enter}');
+    expect(select).toHaveBeenLastCalledWith({
+      id: 'queue-1',
+      name: 'GOODSHOTS!',
+      location: 'Central Park',
+    });
+
+    await user.clear(input);
+    await user.click(screen.getByRole('option', { name: 'Add new queuing…' }));
+    await user.type(screen.getByLabelText('Queuing Name'), 'Friday Games');
+    await user.type(screen.getByLabelText('Queue Location'), 'Sports Centre');
+    await user.click(screen.getByRole('button', { name: 'Add queuing' }));
+    expect(add).toHaveBeenCalledWith('Friday Games', 'Sports Centre');
+    expect(select).toHaveBeenLastCalledWith({
+      id: 'queue-2',
+      name: 'Friday Games',
+      location: 'Sports Centre',
+    });
+  });
+
+  it('edits and removes Queuing Directory entries without mutating the selected snapshot', async () => {
+    const user = userEvent.setup();
+    const entry = { id: 'queue-1', name: 'GOODSHOTS!', location: 'Central Park' };
+    const selectedSnapshot = { ...entry };
+    const update = vi.fn(async () => undefined);
+    const remove = vi.fn(async () => undefined);
+    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    render(
+      <ManageQueuingDirectoryDialog
+        open
+        entries={[entry]}
+        onClose={vi.fn()}
+        onUpdate={update}
+        onRemove={remove}
+      />,
+    );
+    await user.clear(screen.getByLabelText('Queuing Name'));
+    await user.type(screen.getByLabelText('Queuing Name'), 'Friday Games');
+    await user.clear(screen.getByLabelText('Queue Location'));
+    await user.type(screen.getByLabelText('Queue Location'), 'Sports Centre');
+    await user.click(screen.getByRole('button', { name: 'Save GOODSHOTS! at Central Park' }));
+    expect(update).toHaveBeenCalledWith(entry, 'Friday Games', 'Sports Centre');
+    await user.click(screen.getByRole('button', { name: 'Remove GOODSHOTS! at Central Park' }));
+    expect(remove).toHaveBeenCalledWith(entry);
+    expect(selectedSnapshot).toEqual({
+      id: 'queue-1',
+      name: 'GOODSHOTS!',
+      location: 'Central Park',
+    });
   });
 });

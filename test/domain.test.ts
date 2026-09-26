@@ -7,6 +7,8 @@ import {
   generateTitle,
   normalizePlayerDisplayName,
   normalizePlayerName,
+  normalizeQueuingDisplayValue,
+  normalizeQueuingValue,
   regenerateTitle,
   updateGeneratedTitle,
 } from '../shared/domain';
@@ -15,6 +17,7 @@ const base = {
   fileName: 'game.mp4',
   fileSize: 100,
   mimeType: 'video/mp4' as const,
+  titleFormat: 'player_match' as const,
   matchType: 'Singles Match' as const,
   players: ['Alice', 'Bob'],
   titleNames: ['Alice', 'Bob'],
@@ -42,11 +45,52 @@ describe('Game Upload domain rules', () => {
     expect(formatMatchDate('2026-01-02')).toBe('January 2, 2026');
     expect(
       generateTitle({
+        titleFormat: 'player_match',
         matchType: 'Doubles Match',
         titleNames: ['A', 'B', 'C', 'D'],
         matchDate: '2026-09-07',
       }),
     ).toBe('A/B vs C/D | Doubles Match | September 7, 2026');
+  });
+
+  it('generates Queuing Session titles with an optional Game Number', () => {
+    const queuing = {
+      titleFormat: 'queuing_session' as const,
+      queuingName: 'GOODSHOTS!',
+      queueLocation: 'Gameville Central Park',
+      matchDate: '2026-09-15',
+    };
+    expect(generateTitle(queuing)).toBe('GOODSHOTS! | Gameville Central Park | September 15, 2026');
+    expect(generateTitle({ ...queuing, gameNumber: 1 })).toBe(
+      'GOODSHOTS! | Gameville Central Park | Game 1 | September 15, 2026',
+    );
+  });
+
+  it('validates Queuing Session metadata independently of Player Match fields', () => {
+    expect(normalizeQueuingDisplayValue('  ＧOODSHOTS! ')).toBe('GOODSHOTS!');
+    expect(normalizeQueuingValue('  ＧoodShots! ')).toBe('goodshots!');
+    const queuing = {
+      fileName: 'game.mp4',
+      fileSize: 100,
+      mimeType: 'video/mp4' as const,
+      titleFormat: 'queuing_session' as const,
+      queuingName: 'GOODSHOTS!',
+      queueLocation: 'Gameville Central Park',
+      matchDate: '2026-09-15',
+      title: 'GOODSHOTS! | Gameville Central Park | September 15, 2026',
+      description: '',
+      requestedVisibility: 'Unlisted' as const,
+    };
+    expect(gameUploadMetadataSchema.safeParse(queuing).success).toBe(true);
+    expect(gameUploadMetadataSchema.safeParse({ ...queuing, queueLocation: ' ' }).success).toBe(
+      false,
+    );
+    expect(gameUploadMetadataSchema.safeParse({ ...queuing, title: 'x'.repeat(101) }).success).toBe(
+      false,
+    );
+    expect(gameUploadMetadataSchema.safeParse({ ...base, queuingName: 'Unexpected' }).success).toBe(
+      false,
+    );
   });
 
   it('keeps a Custom Title sticky until explicit regeneration', () => {

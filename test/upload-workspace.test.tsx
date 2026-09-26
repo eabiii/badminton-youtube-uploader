@@ -28,6 +28,7 @@ describe('UploadWorkspace recovery states', () => {
   it('accepts Partial Success and discards its transient state', async () => {
     const user = userEvent.setup();
     vi.spyOn(api, 'players').mockResolvedValue({ players });
+    vi.spyOn(api, 'queuingEntries').mockResolvedValue({ queuingEntries: [] });
     vi.spyOn(api, 'acceptPartialSuccess').mockResolvedValue(undefined);
     const onScreen = vi.fn();
     render(
@@ -53,6 +54,7 @@ describe('UploadWorkspace recovery states', () => {
   it('retains the in-memory form through interruption and treats release 410 as success', async () => {
     const user = userEvent.setup();
     vi.spyOn(api, 'players').mockResolvedValue({ players });
+    vi.spyOn(api, 'queuingEntries').mockResolvedValue({ queuingEntries: [] });
     vi.spyOn(api, 'start').mockResolvedValue(uploading);
     vi.spyOn(api, 'chunk').mockRejectedValue(new ApiError('Network unavailable.', 502));
     vi.spyOn(api, 'cancel').mockRejectedValue(

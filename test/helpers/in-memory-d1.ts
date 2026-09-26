@@ -1,4 +1,12 @@
 type PlayerRow = { id: string; display_name: string; normalized_name: string; created_at: number };
+type QueuingEntryRow = {
+  id: string;
+  name: string;
+  location: string;
+  normalized_name: string;
+  normalized_location: string;
+  created_at: number;
+};
 type SessionRow = {
   token_hash: string;
   password_version: string;
@@ -10,6 +18,7 @@ type AttemptRow = { failed_count: number; window_started_at: number };
 
 export class InMemoryD1 {
   readonly players = new Map<string, PlayerRow>();
+  readonly queuingEntries = new Map<string, QueuingEntryRow>();
   readonly sessions = new Map<string, SessionRow>();
   readonly attempts = new Map<string, AttemptRow>();
 
@@ -61,6 +70,15 @@ export class InMemoryD1 {
           (a, b) => a.normalized_name.localeCompare(b.normalized_name) || a.id.localeCompare(b.id),
         )
         .map(({ id, display_name }) => ({ id, display_name }));
+    if (sql.includes('FROM queuing_entries'))
+      return [...this.queuingEntries.values()]
+        .sort(
+          (a, b) =>
+            a.normalized_name.localeCompare(b.normalized_name) ||
+            a.normalized_location.localeCompare(b.normalized_location) ||
+            a.id.localeCompare(b.id),
+        )
+        .map(({ id, name, location }) => ({ id, name, location }));
     throw new Error(`Unsupported all query: ${sql}`);
   }
 
@@ -130,6 +148,50 @@ export class InMemoryD1 {
     }
     if (sql.startsWith('DELETE FROM players'))
       return this.players.delete(String(values[0])) ? 1 : 0;
+    if (sql.startsWith('INSERT INTO queuing_entries')) {
+      const [id, name, location, normalized_name, normalized_location, created_at] = values;
+      if (
+        [...this.queuingEntries.values()].some(
+          (row) =>
+            row.normalized_name === normalized_name &&
+            row.normalized_location === normalized_location,
+        )
+      )
+        throw new Error(
+          'UNIQUE constraint failed: queuing_entries.normalized_name, queuing_entries.normalized_location',
+        );
+      this.queuingEntries.set(String(id), {
+        id: String(id),
+        name: String(name),
+        location: String(location),
+        normalized_name: String(normalized_name),
+        normalized_location: String(normalized_location),
+        created_at: Number(created_at),
+      });
+      return 1;
+    }
+    if (sql.startsWith('UPDATE queuing_entries SET')) {
+      const row = this.queuingEntries.get(String(values[4]));
+      if (!row) return 0;
+      if (
+        [...this.queuingEntries.values()].some(
+          (other) =>
+            other.id !== row.id &&
+            other.normalized_name === values[2] &&
+            other.normalized_location === values[3],
+        )
+      )
+        throw new Error(
+          'UNIQUE constraint failed: queuing_entries.normalized_name, queuing_entries.normalized_location',
+        );
+      row.name = String(values[0]);
+      row.location = String(values[1]);
+      row.normalized_name = String(values[2]);
+      row.normalized_location = String(values[3]);
+      return 1;
+    }
+    if (sql.startsWith('DELETE FROM queuing_entries'))
+      return this.queuingEntries.delete(String(values[0])) ? 1 : 0;
     throw new Error(`Unsupported run query: ${sql}`);
   }
 }

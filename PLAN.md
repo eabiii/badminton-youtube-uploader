@@ -7,6 +7,7 @@ This checklist is the implementation source of truth. A checked item has automat
 - 64 MiB browser chunks; 30-second heartbeats; five-minute upload lease.
 - Sessions have no time-based expiry and are renewed on authenticated use.
 - Player uniqueness uses trim, Unicode NFKC normalization, and locale-independent case folding.
+- Queuing Directory pair uniqueness applies the same normalization independently to Queuing Name and Queue Location.
 - Until `YOUTUBE_AUDIT_APPROVED=true`, requested visibility is truthfully forced to Private.
 - Video bytes, completed metadata, OAuth credentials, refresh tokens, and resumable URLs are never persisted in browser storage.
 
@@ -52,6 +53,19 @@ is recorded in `docs/accessibility-phase-2.md`.
 
 Exit achieved: every PRODUCT.md behavior passes locally, including browser contention and abandoned
 byte-zero restart.
+
+## Phase 2 extension — Queuing Session title format
+
+Dependencies: Phase 2 exit.
+
+- [x] Add the Player Match and Queuing Session Title format selector with mode-specific fields and preserved drafts.
+- [x] Add persistent Queuing Directory storage with normalized pair uniqueness and authenticated CRUD APIs.
+- [x] Generate and validate discriminated Player Match and Queuing Session upload metadata and titles.
+- [x] Add Queuing Directory selection, creation, editing, removal, and active-upload snapshots.
+- [x] Apply format-specific Upload another retention and preserve sticky Custom Titles across formats.
+- [x] Cover Queuing domain, API, component, accessibility, and end-to-end behavior with automated tests.
+
+Exit: both title formats and directory workflows pass locally without changing the single-active-upload lifecycle.
 
 ## Phase 3 — Cloudflare Private beta
 

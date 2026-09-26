@@ -8,6 +8,7 @@ const metadata: GameUploadMetadata = {
   fileName: 'game.mp4',
   fileSize: CHUNK_SIZE + 7,
   mimeType: 'video/mp4',
+  titleFormat: 'player_match',
   matchType: 'Singles Match',
   players: ['Alice', 'Bob'],
   titleNames: ['Alice', 'Bob'],

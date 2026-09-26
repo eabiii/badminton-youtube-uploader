@@ -18,10 +18,12 @@ export type MockOptions = {
   status?: object | (() => object);
   chunkOutcomes?: ChunkOutcome[];
   players?: { id: string; displayName: string }[];
+  queuingEntries?: { id: string; name: string; location: string }[];
   cancelStatus?: number;
   heartbeatStatus?: number;
   loginStatus?: number;
   playerFailure?: { method: string; status: number; message: string };
+  queuingFailure?: { method: string; status: number; message: string };
 };
 
 export type MockState = {
@@ -57,6 +59,10 @@ export async function mockApplication(context: BrowserContext, options: MockOpti
     { id: 'd', displayName: 'Dinesh' },
   ];
   const outcomes = [...(options.chunkOutcomes ?? ['pending'])];
+  const queuingEntries = options.queuingEntries ?? [
+    { id: 'q1', name: 'GOODSHOTS!', location: 'Gameville Central Park' },
+    { id: 'q2', name: 'Friday Club', location: 'Riverside Hall' },
+  ];
   const state: MockState = {
     authenticated: options.authenticated ?? true,
     acceptedPartialSuccess: 0,
@@ -111,6 +117,8 @@ export async function mockApplication(context: BrowserContext, options: MockOpti
       return route.fulfill({ json: status ?? { busy: false } });
     }
     if (path === '/api/players' && method === 'GET') return route.fulfill({ json: { players } });
+    if (path === '/api/queuing-entries' && method === 'GET')
+      return route.fulfill({ json: { queuingEntries } });
     if (options.playerFailure?.method === method && path.startsWith('/api/players'))
       return route.fulfill({
         status: options.playerFailure.status,
@@ -142,6 +150,38 @@ export async function mockApplication(context: BrowserContext, options: MockOpti
     if (playerMatch && method === 'DELETE') {
       const index = players.findIndex((entry) => entry.id === playerMatch[1]);
       if (index >= 0) players.splice(index, 1);
+      return route.fulfill({ status: 204 });
+    }
+    if (options.queuingFailure?.method === method && path.startsWith('/api/queuing-entries'))
+      return route.fulfill({
+        status: options.queuingFailure.status,
+        json: { error: options.queuingFailure.message },
+      });
+    if (path === '/api/queuing-entries' && method === 'POST') {
+      const body = await jsonBody(route);
+      const created = {
+        id: `queue-${queuingEntries.length + 1}`,
+        name: String(body.name),
+        location: String(body.location),
+      };
+      queuingEntries.push(created);
+      return route.fulfill({ status: 201, json: created });
+    }
+    const queuingMatch = path.match(/^\/api\/queuing-entries\/([^/]+)$/);
+    if (queuingMatch && method === 'PATCH') {
+      const entry = queuingEntries.find((candidate) => candidate.id === queuingMatch[1]);
+      const body = await jsonBody(route);
+      if (!entry)
+        return route.fulfill({ status: 404, json: { error: 'Queuing entry not found.' } });
+      entry.name = String(body.name);
+      entry.location = String(body.location);
+      return route.fulfill({ json: entry });
+    }
+    if (queuingMatch && method === 'DELETE') {
+      const index = queuingEntries.findIndex((entry) => entry.id === queuingMatch[1]);
+      if (index < 0)
+        return route.fulfill({ status: 404, json: { error: 'Queuing entry not found.' } });
+      queuingEntries.splice(index, 1);
       return route.fulfill({ status: 204 });
     }
     if (path === '/api/upload/start') {
@@ -214,6 +254,13 @@ export async function selectPlayer(page: Page, label: string, name: string) {
   await input.click();
   await input.fill(name);
   await page.getByRole('option', { name, exact: true }).click();
+}
+
+export async function selectQueuingEntry(page: Page, text: string) {
+  const input = page.getByRole('combobox', { name: 'Queuing Session' });
+  await input.click();
+  await input.fill(text);
+  await page.getByRole('option', { name: text, exact: true }).click();
 }
 
 export async function fillRequiredGame(page: Page) {

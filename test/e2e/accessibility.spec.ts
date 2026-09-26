@@ -37,6 +37,14 @@ async function openState(
   );
   const page = await context.newPage();
   await page.goto('/');
+  if (state === 'login')
+    await expect(page.getByRole('heading', { name: 'Badminton Uploader' })).toBeVisible();
+  if (state === 'form' || state === 'dialog')
+    await expect(page.getByRole('heading', { name: 'Publish one badminton Game' })).toBeVisible();
+  if (state === 'busy')
+    await expect(
+      page.getByRole('heading', { name: 'Another Game Upload is active' }),
+    ).toBeVisible();
   if (state === 'dialog') {
     await page.getByRole('button', { name: 'Manage Players' }).click();
     await expect(page.getByRole('dialog')).toBeVisible();

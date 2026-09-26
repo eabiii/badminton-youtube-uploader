@@ -12,6 +12,22 @@ _Avoid_: Person, competitor
 The shared collection of known Players available for autocomplete. Uploaders may add, rename, merge, or remove entries.
 _Avoid_: Roster, player list
 
+**Queuing Session**:
+A badminton session identified for title purposes by a Queuing Name and Queue Location rather than by specific Players and a Match Type.
+_Avoid_: Upload queue, queued upload
+
+**Queuing Directory**:
+The shared collection of saved Queuing Names and Queue Locations available for Game Upload selection.
+_Avoid_: Session history, upload queue
+
+**Queuing Name**:
+The display name that identifies a Queuing Session within the Queuing Directory.
+_Avoid_: Match name, playlist name
+
+**Queue Location**:
+The venue display name paired with a Queuing Name in the Queuing Directory.
+_Avoid_: Upload destination, queue position
+
 **Title Name Override**:
 A shorter Player name used only for one Game Upload when the generated title would exceed YouTube's title limit. It does not change the Player's canonical display name.
 _Avoid_: Rename, nickname
@@ -45,7 +61,7 @@ The calendar date on which a Match was played, independent of when its video is 
 _Avoid_: Upload date, publication date
 
 **Game Upload**:
-The transient submission of one Game and its publishing choices to YouTube. The application discards it after completion and does not retain upload history or support later corrections.
+The transient submission of one Game and its publishing choices to YouTube. It uses either the Player Match or Queuing Session title format; the application discards it after completion and does not retain upload history or support later corrections.
 _Avoid_: Match Upload, Upload Job, stored video
 
 **Uploader**:
