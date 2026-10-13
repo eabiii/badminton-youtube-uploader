@@ -3,16 +3,19 @@
   "name": "badminton-youtube-uploader",
   "main": "worker/index.ts",
   "compatibility_date": "2026-09-12",
+  "workers_dev": true,
+  "preview_urls": true,
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",
     "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"],
   },
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "badminton-youtube-uploader-local",
-      "database_id": "local-development-placeholder",
+      "database_name": "badminton-youtube-uploader-production",
+      "database_id": "5d25b57d-56e2-4f69-8af7-e9e60b945d91",
       "migrations_dir": "migrations",
     },
   ],
@@ -21,5 +24,52 @@
     "YOUTUBE_AUDIT_APPROVED": "false",
     "SESSION_COOKIE_SECURE": "true",
     "PASSWORD_VERSION": "1",
+    "LOGIN_RATE_LIMIT_WINDOW_SECONDS": "900",
+  },
+  "secrets": {
+    "required": [
+      "SHARED_PASSWORD_HASH",
+      "YOUTUBE_CLIENT_ID",
+      "YOUTUBE_CLIENT_SECRET",
+      "YOUTUBE_REFRESH_TOKEN",
+      "YOUTUBE_PLAYLIST_ID",
+    ],
+  },
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 0.1,
+    "redact_query_string": true,
+    "logs": {
+      "enabled": true,
+      "head_sampling_rate": 0.1,
+      "invocation_logs": true,
+    },
+  },
+  "previews": {
+    "d1_databases": [
+      {
+        "binding": "DB",
+        "database_name": "badminton-youtube-uploader-staging",
+        "database_id": "4757a940-9c96-4220-9622-b76f5a7ffe23",
+        "migrations_dir": "migrations",
+      },
+    ],
+    "vars": {
+      "YOUTUBE_MODE": "live",
+      "YOUTUBE_AUDIT_APPROVED": "false",
+      "SESSION_COOKIE_SECURE": "true",
+      "PASSWORD_VERSION": "1",
+      "LOGIN_RATE_LIMIT_WINDOW_SECONDS": "60",
+    },
+    "observability": {
+      "enabled": true,
+      "head_sampling_rate": 0.1,
+      "redact_query_string": true,
+      "logs": {
+        "enabled": true,
+        "head_sampling_rate": 0.1,
+        "invocation_logs": true,
+      },
+    },
   },
 }

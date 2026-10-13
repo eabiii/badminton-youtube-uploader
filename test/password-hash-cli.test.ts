@@ -32,7 +32,7 @@ describe('password hash CLI', () => {
     });
 
     expect(result.code, result.output).toBe(0);
-    expect(result.output).toMatch(/pbkdf2-sha256:600000:[A-Za-z0-9+/=]+:[A-Za-z0-9+/=]+/);
+    expect(result.output).toMatch(/pbkdf2-sha256:100000:[A-Za-z0-9+/=]+:[A-Za-z0-9+/=]+/);
     expect(result.output).not.toContain(password);
     expect(result.output).not.toContain('Inappropriate ioctl for device');
   });

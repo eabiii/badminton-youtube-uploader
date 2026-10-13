@@ -1,0 +1,48 @@
+name: Deploy production
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12.4.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Record current deployment
+        shell: bash
+        run: |
+          current_deployment="$(pnpm exec wrangler deployments list --name badminton-youtube-uploader --json | jq -er '.[0].id // "none"')"
+          echo "Previous deployment ID: ${current_deployment}" >> "${GITHUB_STEP_SUMMARY}"
+      - name: Apply production migrations
+        run: pnpm exec wrangler d1 migrations apply badminton-youtube-uploader-production --remote
+      - run: pnpm build
+      - name: Deploy production Worker
+        run: pnpm exec wrangler deploy
+      - name: Probe production health
+        shell: bash
+        run: |
+          workers_subdomain="$(curl --fail --silent --show-error \
+            --header "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/workers/subdomain" \
+            | jq -er '.result.subdomain')"
+          curl --fail --silent --show-error --retry 10 --retry-delay 5 --retry-all-errors \
+            "https://badminton-youtube-uploader.${workers_subdomain}.workers.dev/api/health"

@@ -1,10 +1,10 @@
-export const LOGIN_WINDOW_MS = 15 * 60_000;
 export const LOGIN_ATTEMPT_LIMIT = 5;
 type AttemptRow = { failed_count: number; window_started_at: number };
 
 export class LoginThrottle {
   constructor(
     private readonly database: D1Database,
+    private readonly windowMs: number,
     private readonly now: () => number = Date.now,
   ) {}
   async retryAfter(clientHash: string): Promise<number | null> {
@@ -15,15 +15,15 @@ export class LoginThrottle {
       .first<AttemptRow>();
     if (
       !row ||
-      row.window_started_at + LOGIN_WINDOW_MS <= now ||
+      row.window_started_at + this.windowMs <= now ||
       row.failed_count < LOGIN_ATTEMPT_LIMIT
     )
       return null;
-    return Math.max(1, Math.ceil((row.window_started_at + LOGIN_WINDOW_MS - now) / 1_000));
+    return Math.max(1, Math.ceil((row.window_started_at + this.windowMs - now) / 1_000));
   }
   async failed(clientHash: string): Promise<void> {
     const now = this.now();
-    const windowStart = now - LOGIN_WINDOW_MS;
+    const windowStart = now - this.windowMs;
     await this.database
       .prepare(
         `INSERT INTO login_attempts (client_hash, failed_count, window_started_at)

@@ -48,6 +48,7 @@ export class InMemoryD1 {
   }
 
   private first(sql: string, values: unknown[]): unknown {
+    if (sql === 'SELECT 1 AS healthy') return { healthy: 1 };
     if (sql.startsWith('SELECT failed_count')) return this.attempts.get(String(values[0])) ?? null;
     if (sql.startsWith('SELECT token_hash FROM sessions')) {
       const row = this.sessions.get(String(values[0]));

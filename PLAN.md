@@ -6,6 +6,8 @@ This checklist is the implementation source of truth. A checked item has automat
 
 - 64 MiB browser chunks; 30-second heartbeats; five-minute upload lease.
 - Sessions have no time-based expiry and are renewed on authenticated use.
+- Shared-password hashes use Cloudflare's maximum supported PBKDF2-HMAC-SHA256 work factor of 100,000 iterations.
+- Login throttling allows five failed attempts per hashed client IP in a 15-minute production/local window and a one-minute staging window.
 - Player uniqueness uses trim, Unicode NFKC normalization, and locale-independent case folding.
 - Queuing Directory pair uniqueness applies the same normalization independently to Queuing Name and Queue Location.
 - Until `YOUTUBE_AUDIT_APPROVED=true`, requested visibility is truthfully forced to Private.
@@ -69,16 +71,20 @@ Exit: both title formats and directory workflows pass locally without changing t
 
 ## Phase 3 — Cloudflare Private beta
 
-Dependencies: Phase 2 exit, Cloudflare account/project, and preview/production secrets.
+Dependencies: Phase 2 exit, Cloudflare account/Worker, and staging/production secrets.
 
-- [ ] Define Pages Functions bindings, D1 migrations, environment validation, health endpoint, CI checks, and deployment notes.
-- [ ] Create preview and production Pages/D1 resources and apply migrations.
+- [x] Define Worker Static Assets bindings, D1 migrations, environment validation, health endpoint, CI checks, and deployment notes.
+- [x] Create the fixed staging Worker Preview and separate staging/production D1 resources, then apply migrations.
 - [ ] Configure secrets and authorize the dedicated test channel.
-- [ ] Add preview deployment workflow after Cloudflare credentials are available.
+- [ ] Add manual staging and production Worker deployment workflows after Cloudflare credentials are available.
 - [ ] Validate PBKDF2 CPU cost, streaming, lease heartbeats, near-2 GB uploads, OAuth rotation, and D1 recovery on Cloudflare.
 - [ ] Run hosted trusted-Uploader beta and rollback drill.
 
-Exit: hosted beta uploads truthfully as Private and operational validations pass. Move to Workers Paid if secure password verification exceeds Free CPU limits.
+On September 26, 2026, Wrangler's dry run, the complete local verification suite, and focused health tests passed. Both APAC D1 databases reported no pending migrations and returned the expected schema from remote queries, and the fixed `staging` Preview was created. The staging root route returned `200` and an unauthenticated protected API returned `401` at `staging-badminton-youtube-uploader.edbar1025.workers.dev`.
+
+On September 27, 2026, all five staging secrets were present, staging health returned `200`, and an OAuth refresh plus read-only YouTube API checks verified the dedicated test channel authorization and Destination Playlist access. Production's correctly named refresh-token secret was installed and its obsolete misspelled secret was removed. The production shared-password hash and GitHub deployment credentials remain operator work; the local 600,000-iteration password hash is intentionally not deployable because Cloudflare Workers accepts at most 100,000 iterations.
+
+Exit: the hosted Worker beta uploads truthfully as Private and operational validations pass. Move to Workers Paid if secure password verification exceeds Free CPU limits.
 
 ## Phase 4 — Compliance and production
 

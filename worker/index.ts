@@ -7,7 +7,7 @@ import {
   queuingEntryMutationSchema,
 } from '../shared/domain';
 import { createSession, requireSession, revokeSession, sha256, verifyPassword } from './auth';
-import type { Bindings } from './env';
+import { hasValidConfiguration, loginRateLimitWindowMs, type Bindings } from './env';
 import { LoginThrottle } from './login-throttle';
 import { PlayerDirectory, PlayerDirectoryError } from './players';
 import { QueuingDirectory, QueuingDirectoryError } from './queuing-entries';
@@ -39,9 +39,20 @@ app.use('/api/*', async (context, next) => {
   context.header('x-content-type-options', 'nosniff');
 });
 
+app.get('/api/health', async (context) => {
+  try {
+    if (!hasValidConfiguration(context.env)) throw new Error('Invalid configuration');
+    const result = await context.env.DB.prepare('SELECT 1 AS healthy').first<{ healthy: number }>();
+    if (result?.healthy !== 1) throw new Error('Database check failed');
+    return context.json({ status: 'ok' });
+  } catch {
+    return context.json({ status: 'unavailable' }, 503);
+  }
+});
+
 app.post('/api/login', async (context) => {
   const clientHash = await sha256(context.req.header('CF-Connecting-IP') ?? 'local');
-  const throttle = new LoginThrottle(context.env.DB);
+  const throttle = new LoginThrottle(context.env.DB, loginRateLimitWindowMs(context.env));
   const retryAfter = await throttle.retryAfter(clientHash);
   if (retryAfter !== null) {
     context.header('Retry-After', String(retryAfter));

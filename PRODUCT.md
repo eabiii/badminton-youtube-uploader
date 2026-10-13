@@ -93,7 +93,7 @@ Month names are always English. An Uploader may shorten a Player name for the cu
 
 ## Hosting and compliance
 
-- Use Cloudflare Pages, Workers, and D1 with a free-first deployment.
+- Deploy the web interface and backend together as one Cloudflare Worker with Static Assets, using D1 for durable application state and a free-first deployment.
 - A domain has not yet been acquired. Domain registration, verification, HTTPS hosting, a public homepage, and a privacy policy are prerequisites for production review.
 - Pursue both applicable Google OAuth verification and the YouTube API compliance audit.
 - Before YouTube approves the API project, uploads are restricted to Private regardless of the requested visibility; the application must represent that truthfully.

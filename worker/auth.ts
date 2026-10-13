@@ -22,40 +22,42 @@ export async function sha256(value: string): Promise<string> {
 }
 
 export async function verifyPassword(password: string, encoded: string): Promise<boolean> {
+  if (typeof encoded !== 'string') return false;
   const [algorithm, iterationText, saltText, expectedText] = encoded.split(':');
   const iterations = Number(iterationText);
-  if (algorithm !== 'pbkdf2-sha256' || !Number.isSafeInteger(iterations) || iterations < 100_000)
-    return false;
+  if (algorithm !== 'pbkdf2-sha256' || iterations !== 100_000) return false;
 
+  let saltBytes: Uint8Array;
+  let expected: Uint8Array;
   try {
-    const saltBytes = decodeBase64(saltText);
-    const salt = saltBytes.buffer.slice(
-      saltBytes.byteOffset,
-      saltBytes.byteOffset + saltBytes.byteLength,
-    ) as ArrayBuffer;
-    const expected = decodeBase64(expectedText);
-    const key = await crypto.subtle.importKey(
-      'raw',
-      new TextEncoder().encode(password),
-      'PBKDF2',
-      false,
-      ['deriveBits'],
-    );
-    const actual = new Uint8Array(
-      await crypto.subtle.deriveBits(
-        { name: 'PBKDF2', hash: 'SHA-256', salt, iterations },
-        key,
-        expected.length * 8,
-      ),
-    );
-    if (actual.length !== expected.length) return false;
-    let difference = 0;
-    for (let index = 0; index < actual.length; index += 1)
-      difference |= actual[index] ^ expected[index];
-    return difference === 0;
+    saltBytes = decodeBase64(saltText);
+    expected = decodeBase64(expectedText);
   } catch {
     return false;
   }
+  const salt = saltBytes.buffer.slice(
+    saltBytes.byteOffset,
+    saltBytes.byteOffset + saltBytes.byteLength,
+  ) as ArrayBuffer;
+  const key = await crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(password),
+    'PBKDF2',
+    false,
+    ['deriveBits'],
+  );
+  const actual = new Uint8Array(
+    await crypto.subtle.deriveBits(
+      { name: 'PBKDF2', hash: 'SHA-256', salt, iterations },
+      key,
+      expected.length * 8,
+    ),
+  );
+  if (actual.length !== expected.length) return false;
+  let difference = 0;
+  for (let index = 0; index < actual.length; index += 1)
+    difference |= actual[index] ^ expected[index];
+  return difference === 0;
 }
 
 function cookieOptions(context: Context<AuthEnv>) {

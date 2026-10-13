@@ -1,0 +1,42 @@
+name: Deploy staging
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12.4.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Apply staging migrations
+        run: pnpm exec wrangler d1 migrations apply badminton-youtube-uploader-staging --remote --config wrangler.staging-migrations.jsonc
+      - run: pnpm build
+      - name: Deploy fixed staging Preview
+        run: pnpm exec wrangler preview --name staging
+      - name: Probe staging health
+        shell: bash
+        run: |
+          workers_subdomain="$(curl --fail --silent --show-error \
+            --header "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/workers/subdomain" \
+            | jq -er '.result.subdomain')"
+          curl --fail --silent --show-error --retry 10 --retry-delay 5 --retry-all-errors \
+            "https://staging-badminton-youtube-uploader.${workers_subdomain}.workers.dev/api/health"

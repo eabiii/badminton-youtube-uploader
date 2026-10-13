@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { verifyPassword } from '../worker/auth';
 import app from '../worker/index';
 import type { Bindings } from '../worker/env';
@@ -28,6 +28,7 @@ async function environment(database: InMemoryD1, version = '1') {
     DB: database.asDatabase(),
     SHARED_PASSWORD_HASH: await passwordHash('correct horse'),
     PASSWORD_VERSION: version,
+    LOGIN_RATE_LIMIT_WINDOW_SECONDS: '900',
     SESSION_COOKIE_SECURE: 'false',
     YOUTUBE_MODE: 'fake',
     YOUTUBE_AUDIT_APPROVED: 'false',
@@ -40,6 +41,17 @@ describe('shared-password authentication', () => {
     const encoded = await passwordHash('a useful shared password');
     await expect(verifyPassword('a useful shared password', encoded)).resolves.toBe(true);
     await expect(verifyPassword('incorrect', encoded)).resolves.toBe(false);
+  });
+
+  it('does not report a runtime crypto failure as an incorrect password', async () => {
+    const encoded = await passwordHash('a useful shared password');
+    vi.spyOn(crypto.subtle, 'deriveBits').mockRejectedValueOnce(
+      new DOMException('PBKDF2 is unavailable', 'NotSupportedError'),
+    );
+
+    await expect(verifyPassword('a useful shared password', encoded)).rejects.toThrow(
+      'PBKDF2 is unavailable',
+    );
   });
 
   it('creates and rolls a persistent 400-day session cookie', async () => {

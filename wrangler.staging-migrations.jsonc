@@ -1,0 +1,13 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "badminton-youtube-uploader-staging-migrations",
+  "compatibility_date": "2026-09-12",
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "badminton-youtube-uploader-staging",
+      "database_id": "4757a940-9c96-4220-9622-b76f5a7ffe23",
+      "migrations_dir": "migrations",
+    },
+  ],
+}

@@ -30,7 +30,8 @@ if (!password) {
   console.error('Provide the shared password on standard input.');
   process.exitCode = 1;
 } else {
-  const iterations = 600_000;
+  // Cloudflare Workers rejects Web Crypto PBKDF2 requests above 100,000 iterations.
+  const iterations = 100_000;
   const salt = randomBytes(16);
   const hash = pbkdf2Sync(password, salt, iterations, 32, 'sha256');
   process.stdout.write(

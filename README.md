@@ -8,7 +8,7 @@ Requirements: Node.js 24+ and pnpm 12+.
 
 ```sh
 pnpm install
-pnpm exec wrangler d1 migrations apply badminton-youtube-uploader-local --local
+pnpm exec wrangler d1 migrations apply DB --local
 pnpm password:hash
 cp .dev.vars.example .dev.vars
 ```
@@ -28,18 +28,20 @@ Sessions have no server-side time expiry and remain revocable. Because browsers 
 After pulling or creating a new numbered file in `migrations/`, check for pending local D1 migrations and apply them before starting or restarting the application:
 
 ```sh
-pnpm exec wrangler d1 migrations list badminton-youtube-uploader-local --local
-pnpm exec wrangler d1 migrations apply badminton-youtube-uploader-local --local
+pnpm exec wrangler d1 migrations list DB --local
+pnpm exec wrangler d1 migrations apply DB --local
 pnpm dev
 ```
 
 Do not edit a migration that may already have been applied. Add a new numbered migration instead so existing databases can advance safely. A missing-table `500` response from a newly added API route usually means its migration is still pending.
 
-For a deployed D1 database, first verify that `wrangler.jsonc` identifies the intended environment and database. Then inspect and apply migrations with `--remote` instead of `--local`:
+For a deployed D1 database, first verify that the relevant Wrangler configuration identifies the intended environment and database. Then inspect and apply migrations with `--remote` instead of `--local`:
 
 ```sh
-pnpm exec wrangler d1 migrations list badminton-youtube-uploader-local --remote
-pnpm exec wrangler d1 migrations apply badminton-youtube-uploader-local --remote
+pnpm exec wrangler d1 migrations list badminton-youtube-uploader-staging --remote --config wrangler.staging-migrations.jsonc
+pnpm exec wrangler d1 migrations apply badminton-youtube-uploader-staging --remote --config wrangler.staging-migrations.jsonc
+pnpm exec wrangler d1 migrations list badminton-youtube-uploader-production --remote
+pnpm exec wrangler d1 migrations apply badminton-youtube-uploader-production --remote
 ```
 
 Remote migrations change deployed data and should not be run against an unverified database target.
@@ -72,6 +74,10 @@ Google Cloud Console does not display an existing refresh token. Generate a repl
 8. Restart the local development server or redeploy the configured environment before retrying a Game Upload.
 
 The client ID, client secret, and refresh token must belong to the same OAuth client. If a new OAuth client was created, update all three values together. An `invalid_grant` response usually means the refresh token expired or was revoked; `unauthorized_client` usually means the refresh token was issued for a different OAuth client. Never commit or share any of these values.
+
+## Cloudflare deployment
+
+Production is the `badminton-youtube-uploader` Worker. Staging is its fixed `staging` Worker Preview. Both serve the React build through Workers Static Assets and use separate APAC D1 databases. See [the private-beta runbook](docs/cloudflare-private-beta.md) for resource setup, secrets, manual deployment, health checks, and rollback/recovery validation.
 
 ## Verification
 

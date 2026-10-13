@@ -15,7 +15,7 @@ If documents appear to conflict, preserve the architectural decisions in the ADR
 
 ## Planned stack
 
-React · Vite · strict TypeScript · Tailwind CSS · Hono · Cloudflare Pages and Workers · D1 with Drizzle · Zod · Vitest · Playwright · Wrangler.
+React · Vite · strict TypeScript · Tailwind CSS · Hono · Cloudflare Workers with Static Assets · D1 with Drizzle · Zod · Vitest · Playwright · Wrangler.
 
 Prefer shared domain logic and validation over separate client and server interpretations. Keep platform and framework dependencies out of pure domain code where practical.
 
@@ -65,7 +65,7 @@ These rules protect credentials, preserve truthful YouTube behavior, or define t
 
 ### Hosting and operations
 
-- Keep the architecture Cloudflare free-first: Pages for the web interface, Workers for backend/integration logic, and D1 for durable application state.
+- Keep the architecture Cloudflare free-first: one Worker with Static Assets for the web interface and backend/integration logic, and D1 for durable application state.
 - Do not add persistent video storage as a workaround for platform limits. Chunking must remain compatible with both Cloudflare request limits and YouTube resumable uploads.
 - Treat the YouTube refresh token and shared-password material as high-value secrets. Keep secrets out of source, client bundles, diagnostics, and logs.
 - Use the deterministic fake YouTube publisher for automated and local tests; live integration checks require the dedicated test channel and configured playlist.
