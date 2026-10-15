@@ -66,6 +66,42 @@ button {
   width: 430px;
   padding: 38px;
 }
+.landing {
+  display: grid;
+  gap: 28px;
+  justify-items: center;
+}
+.public-section {
+  width: 430px;
+}
+.public-section h2 {
+  font-size: 18px;
+  margin-bottom: 8px;
+}
+.public-footer {
+  font-size: 14px;
+}
+.public-footer a,
+.policy a {
+  color: #247249;
+  text-decoration: underline;
+}
+.policy-shell {
+  padding: 48px 32px 80px;
+}
+.policy {
+  max-width: 720px;
+  margin: 0 auto;
+}
+.policy section {
+  margin-top: 32px;
+}
+.policy h2 {
+  margin-bottom: 8px;
+}
+.policy li {
+  margin-bottom: 8px;
+}
 .status-card {
   max-width: 650px;
   padding: 48px;

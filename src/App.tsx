@@ -1,6 +1,7 @@
 import { type FormEvent, useEffect, useState } from 'react';
 import type { UploadView } from '../shared/domain';
 import { ApiError, api } from './api';
+import { HomeAbout, PublicFooter } from './PublicPages';
 import { ScreenHeading } from './ScreenHeading';
 import { UploadWorkspace, type WorkspaceScreen } from './UploadWorkspace';
 
@@ -28,29 +29,33 @@ function Login({ onSuccess }: { onSuccess: () => Promise<void> }) {
   }
   return (
     <main className="centered-shell">
-      <form className="card login-card" onSubmit={submit}>
-        <p className="eyebrow">Trusted Uploaders</p>
-        <h1>Badminton Uploader</h1>
-        <p className="muted">Use the shared deployment password to continue.</p>
-        <label>
-          Shared password
-          <input
-            type="password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            autoFocus
-            required
-          />
-        </label>
-        {error && (
-          <p className="error" role="alert">
-            {error}
-          </p>
-        )}
-        <button className="primary" disabled={submitting}>
-          {submitting ? 'Signing in…' : 'Sign in'}
-        </button>
-      </form>
+      <div className="landing">
+        <form className="card login-card" onSubmit={submit}>
+          <p className="eyebrow">Trusted Uploaders</p>
+          <h1>Badminton Uploader</h1>
+          <p className="muted">Use the shared deployment password to continue.</p>
+          <label>
+            Shared password
+            <input
+              type="password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              autoFocus
+              required
+            />
+          </label>
+          {error && (
+            <p className="error" role="alert">
+              {error}
+            </p>
+          )}
+          <button className="primary" disabled={submitting}>
+            {submitting ? 'Signing in…' : 'Sign in'}
+          </button>
+        </form>
+        <HomeAbout />
+        <PublicFooter />
+      </div>
     </main>
   );
 }
