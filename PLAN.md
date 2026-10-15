@@ -76,13 +76,15 @@ Dependencies: Phase 2 exit, Cloudflare account/Worker, and staging/production se
 - [x] Define Worker Static Assets bindings, D1 migrations, environment validation, health endpoint, CI checks, and deployment notes.
 - [x] Create the fixed staging Worker Preview and separate staging/production D1 resources, then apply migrations.
 - [ ] Configure secrets and authorize the dedicated test channel.
-- [ ] Add manual staging and production Worker deployment workflows after Cloudflare credentials are available.
+- [x] Add manual staging and production Worker deployment workflows after Cloudflare credentials are available.
 - [ ] Validate PBKDF2 CPU cost, streaming, lease heartbeats, near-2 GB uploads, OAuth rotation, and D1 recovery on Cloudflare.
 - [ ] Run hosted trusted-Uploader beta and rollback drill.
 
 On September 26, 2026, Wrangler's dry run, the complete local verification suite, and focused health tests passed. Both APAC D1 databases reported no pending migrations and returned the expected schema from remote queries, and the fixed `staging` Preview was created. The staging root route returned `200` and an unauthenticated protected API returned `401` at `staging-badminton-youtube-uploader.edbar1025.workers.dev`.
 
 On September 27, 2026, all five staging secrets were present, staging health returned `200`, and an OAuth refresh plus read-only YouTube API checks verified the dedicated test channel authorization and Destination Playlist access. Production's correctly named refresh-token secret was installed and its obsolete misspelled secret was removed. The production shared-password hash and GitHub deployment credentials remain operator work; the local 600,000-iteration password hash is intentionally not deployable because Cloudflare Workers accepts at most 100,000 iterations.
+
+On October 15, 2026, both manual deployment workflows ran successfully and the production shared-password hash was installed. Preview deployments replace their secrets, so the staging workflow uploads them from GitHub repository secrets with each deploy; production secrets stay in Cloudflare. Hosted staging authentication checks passed; see `docs/phase-3-validation.md`. GitHub deployment credentials are in place. The remaining validations are the hosted upload checks, PBKDF2 CPU cost, near-2 GB upload, OAuth rotation, D1 recovery, and the rollback drill.
 
 Exit: the hosted Worker beta uploads truthfully as Private and operational validations pass. Move to Workers Paid if secure password verification exceeds Free CPU limits.
 
