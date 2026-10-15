@@ -71,6 +71,16 @@ Create an account-scoped Cloudflare API token restricted to the intended account
 - `CLOUDFLARE_ACCOUNT_ID`
 - `CLOUDFLARE_API_TOKEN`
 
+Every `wrangler preview` deployment replaces its secrets, and base-config secrets were not inherited by new deployments. The staging workflow therefore uploads the five staging secrets with `--secrets-file` on each deploy. Add them as GitHub repository secrets, using the dedicated test channel's values:
+
+- `STAGING_SHARED_PASSWORD_HASH`
+- `STAGING_YOUTUBE_CLIENT_ID`
+- `STAGING_YOUTUBE_CLIENT_SECRET`
+- `STAGING_YOUTUBE_REFRESH_TOKEN`
+- `STAGING_YOUTUBE_PLAYLIST_ID`
+
+The workflow writes them to a mode-600 temporary file that is deleted when the step exits. Production secrets stay in Cloudflare only.
+
 The CI workflow verifies pull requests and `main`. Manual staging deployment accepts any selected branch. Manual production deployment runs only from `main`, records the previous deployment ID in its job summary, migrates, deploys, and probes health. Workflows derive the account's `workers.dev` subdomain from the Cloudflare API rather than storing it in the repository.
 
 ## Acceptance and rollout

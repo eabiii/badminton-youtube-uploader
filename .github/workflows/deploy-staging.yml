@@ -30,7 +30,26 @@ jobs:
         run: pnpm exec wrangler d1 migrations apply badminton-youtube-uploader-staging --remote --config wrangler.staging-migrations.jsonc
       - run: pnpm build
       - name: Deploy fixed staging Preview
-        run: pnpm exec wrangler preview --name staging
+        env:
+          STAGING_SHARED_PASSWORD_HASH: ${{ secrets.STAGING_SHARED_PASSWORD_HASH }}
+          STAGING_YOUTUBE_CLIENT_ID: ${{ secrets.STAGING_YOUTUBE_CLIENT_ID }}
+          STAGING_YOUTUBE_CLIENT_SECRET: ${{ secrets.STAGING_YOUTUBE_CLIENT_SECRET }}
+          STAGING_YOUTUBE_REFRESH_TOKEN: ${{ secrets.STAGING_YOUTUBE_REFRESH_TOKEN }}
+          STAGING_YOUTUBE_PLAYLIST_ID: ${{ secrets.STAGING_YOUTUBE_PLAYLIST_ID }}
+        shell: bash
+        run: |
+          # Each Preview deployment replaces its secrets, so upload them with every deploy.
+          secrets_file="$(mktemp "${RUNNER_TEMP}/staging-secrets.XXXXXX")"
+          trap 'rm -f "${secrets_file}"' EXIT
+          chmod 600 "${secrets_file}"
+          jq -n '{
+            SHARED_PASSWORD_HASH: env.STAGING_SHARED_PASSWORD_HASH,
+            YOUTUBE_CLIENT_ID: env.STAGING_YOUTUBE_CLIENT_ID,
+            YOUTUBE_CLIENT_SECRET: env.STAGING_YOUTUBE_CLIENT_SECRET,
+            YOUTUBE_REFRESH_TOKEN: env.STAGING_YOUTUBE_REFRESH_TOKEN,
+            YOUTUBE_PLAYLIST_ID: env.STAGING_YOUTUBE_PLAYLIST_ID
+          } | if any(.[]; . == null or . == "") then error("missing staging secret") else . end' > "${secrets_file}"
+          pnpm exec wrangler preview --name staging --secrets-file "${secrets_file}"
       - name: Probe staging health
         shell: bash
         run: |
