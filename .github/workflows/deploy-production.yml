@@ -24,7 +24,7 @@ jobs:
           version: 12.4.1
       - uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version: 26
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - name: Record current deployment

@@ -4,7 +4,7 @@ Desktop web application for trusted Uploaders to publish individual badminton Ga
 
 ## Local setup
 
-Requirements: Node.js 24+ and pnpm 12+.
+Requirements: Node.js 26+ and pnpm 12+.
 
 ```sh
 pnpm install
